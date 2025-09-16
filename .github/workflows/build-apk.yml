@@ -1,120 +1,156 @@
-# name: Android Flavored APK Builds
+name: Android APK per Flavor
 
-# on:
-#   workflow_dispatch:
-#     inputs:
-#       flavor:
-#         description: "Flavor to build"
-#         type: choice
-#         required: true
-#         options: [dev, staging, prod]
-#         default: dev
-#   push:
-#     branches: [ main ]
+on:
+  push:
+    branches: [ dev, staging, prod ]
+  workflow_dispatch:
+    inputs:
+      flavor:
+        description: "Flavor to build (overrides branch mapping)"
+        type: choice
+        required: false
+        options: [dev, staging, prod]
+      version_name:
+        description: "Desired semantic version (e.g., 1.0.0)"
+        required: false
+        default: "1.0.0"
 
-# jobs:
-#   build:
-#     runs-on: ubuntu-latest
-#     env:
-#       FLAVOR: ${{ github.event.inputs.flavor || 'dev' }}
-#     steps:
-#       - name: Checkout
-#         uses: actions/checkout@v4
-#         with:
-#           fetch-depth: 0
-#           persist-credentials: false
+env:
+  DEFAULT_VERSION_NAME: "1.0.0"
 
-#       - name: Setup Java
-#         uses: actions/setup-java@v4
-#         with:
-#           distribution: temurin
-#           java-version: '17'
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-#       - name: Setup Flutter
-#         uses: subosito/flutter-action@v2
-#         with:
-#           channel: 'stable'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
-#       - name: Flutter pub get
-#         run: flutter pub get
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
-#       - name: Compute VERSION_NAME and next BUILD_NUMBER per flavor
-#         shell: bash
-#         run: |
-#           set -e
-#           VERSION_LINE=$(grep '^version:' pubspec.yaml | head -1 | awk '{print $2}')
-#           VERSION_NAME="${VERSION_LINE%%+*}"
-#           BUILD_DIR="builds/${FLAVOR}"
-#           mkdir -p "${BUILD_DIR}"
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
 
-#           # Scan existing APK filenames to get the last versionCode (+N before .apk)
-#           LAST_CODE=$(ls -1 ${BUILD_DIR}/*.apk 2>/dev/null | sed -nE 's/.*\+([0-9]+)\.apk$/\1/p' | sort -n | tail -1)
-#           NEXT_CODE=$(( ${LAST_CODE:-0} + 1 ))
+      - name: Resolve FLAVOR (branch or input)
+        shell: bash
+        run: |
+          set -e
+          # If manual run provided a flavor, use it; otherwise map branch->flavor
+          if [[ -n "${{ github.event.inputs.flavor }}" ]]; then
+            echo "FLAVOR=${{ github.event.inputs.flavor }}" >> $GITHUB_ENV
+          else
+            case "${GITHUB_REF_NAME}" in
+              dev) echo "FLAVOR=dev" >> $GITHUB_ENV ;;
+              staging) echo "FLAVOR=staging" >> $GITHUB_ENV ;;
+              prod) echo "FLAVOR=prod" >> $GITHUB_ENV ;;
+              *) echo "FLAVOR=dev" >> $GITHUB_ENV ;; # default
+            esac
+          fi
 
-#           echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
-#           echo "BUILD_NUMBER=$NEXT_CODE" >> $GITHUB_ENV
-#           echo "BUILD_DIR=$BUILD_DIR" >> $GITHUB_ENV
+      - name: Flutter pub get
+        run: flutter pub get
 
-#       # Optional: setup signing with a keystore from secrets if needed
-#       # - name: Decode Android keystore
-#       #   run: echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/keystore.jks
-#       #   env:
-#       #     ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-#       # - name: Setup key.properties
-#       #   run: |
-#       #     cat > android/key.properties << 'EOF'
-#       #     storeFile=keystore.jks
-#       #     storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-#       #     keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
-#       #     keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
-#       #     EOF
+      - name: Compute semantic version and next versionCode per flavor
+        shell: bash
+        run: |
+          set -e
+          FLAVOR="${FLAVOR}"
+          BUILD_DIR="builds/${FLAVOR}"
+          mkdir -p "${BUILD_DIR}"
 
-#       - name: Build APK (release, flavored)
-#         run: |
-#           flutter build apk \
-#             --flavor $FLAVOR \
-#             --dart-define=FLAVOR=$FLAVOR \
-#             --release \
-#             --build-name="$VERSION_NAME" \
-#             --build-number="$BUILD_NUMBER"
+          # 1) Desired versionName from input or default
+          INPUT_VER="${{ github.event.inputs.version_name }}"
+          if [[ -z "${INPUT_VER}" ]]; then
+            INPUT_VER="${DEFAULT_VERSION_NAME}"
+          fi
 
-#       - name: Collect APK into builds/<flavor> and update index
-#         shell: bash
-#         run: |
-#           set -e
-#           ts=$(date -u +'%Y%m%d-%H%M%S')
+          # 2) Latest versionName found in repo for this flavor (from filenames)
+          # Filenames like: app-<flavor>-v<name>+<code>-<ts>.apk
+          LAST_VER=$(ls -1 ${BUILD_DIR}/*.apk 2>/dev/null | sed -nE 's/.*-v([0-9]+\.[0-9]+\.[0-9]+)\+[0-9]+-.*/\1/p' | sort -V | tail -1)
 
-#           # Try two known output locations depending on Flutter/Gradle version
-#           APK_SRC="build/app/outputs/flutter-apk/app-${FLAVOR}-release.apk"
-#           if [ ! -f "$APK_SRC" ]; then
-#             APK_SRC="build/app/outputs/apk/${FLAVOR}/release/app-${FLAVOR}-release.apk"
-#           fi
+          # Pick the higher semantic version: max(INPUT_VER, LAST_VER)
+          if [[ -z "${LAST_VER}" ]]; then
+            VERSION_NAME="${INPUT_VER}"
+          else
+            # sort -V prints smallest first; take tail -1 as max
+            VERSION_NAME=$(printf "%s\n%s\n" "${INPUT_VER}" "${LAST_VER}" | sort -V | tail -1)
+          fi
 
-#           APK_DST="${BUILD_DIR}/app-${FLAVOR}-v${VERSION_NAME}+${BUILD_NUMBER}-${ts}.apk"
-#           cp "$APK_SRC" "$APK_DST"
+          # 3) Next versionCode = last code + 1 across this flavor
+          LAST_CODE=$(ls -1 ${BUILD_DIR}/*.apk 2>/dev/null | sed -nE 's/.*\+([0-9]+)-.*/\1/p' | sort -n | tail -1)
+          BUILD_NUMBER=$(( ${LAST_CODE:-0} + 1 ))
 
-#           INDEX="${BUILD_DIR}/index.md"
-#           NEWLINE="| ${ts} | ${FLAVOR} | v${VERSION_NAME}+${BUILD_NUMBER} |"
-#           if [ ! -f "$INDEX" ]; then
-#             echo "| Timestamp (UTC) | Flavor | Version |" > "$INDEX"
-#             echo "|---|---|---|" >> "$INDEX"
-#           fi
-#           TMP="${INDEX}.tmp"
-#           head -n 2 "$INDEX" > "$TMP"
-#           echo "$NEWLINE" >> "$TMP"
-#           tail -n +3 "$INDEX" >> "$TMP"
-#           mv "$TMP" "$INDEX"
+          echo "BUILD_DIR=$BUILD_DIR"       >> $GITHUB_ENV
+          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
 
-#       - name: Commit changes
-#         shell: bash
-#         run: |
-#           git config --local user.email "github-actions[bot]@users.noreply.github.com"
-#           git config --local user.name "github-actions[bot]"
-#           git add builds/
-#           git commit -m "Add ${FLAVOR} APK v${VERSION_NAME}+${BUILD_NUMBER} [skip ci]" || echo "No changes to commit"
+      # Optional: setup signing with a keystore from secrets if needed
+      # - name: Decode Android keystore
+      #   run: echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/keystore.jks
+      #   env:
+      #     ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      #
+      # - name: Setup key.properties
+      #   run: |
+      #     cat > android/key.properties << 'EOF'
+      #     storeFile=keystore.jks
+      #     storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      #     keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+      #     keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+      #     EOF
 
-#       - name: Push builds with PAT
-#         uses: ad-m/github-push-action@master
-#         with:
-#           github_token: ${{ secrets.TOKEN }}
-#           branch: ${{ github.ref_name }}
+      - name: Build APK (release, flavored)
+        run: |
+          flutter build apk \
+            --flavor "$FLAVOR" \
+            --dart-define=FLAVOR="$FLAVOR" \
+            --release \
+            --build-name="$VERSION_NAME" \
+            --build-number="$BUILD_NUMBER"
+
+      - name: Archive APK to builds/<flavor> and update index
+        shell: bash
+        run: |
+          set -e
+          ts=$(date -u +'%Y%m%d-%H%M%S')
+          APK_SRC="build/app/outputs/flutter-apk/app-${FLAVOR}-release.apk"
+          if [ ! -f "$APK_SRC" ]; then
+            APK_SRC="build/app/outputs/apk/${FLAVOR}/release/app-${FLAVOR}-release.apk"
+          fi
+          APK_DST="${BUILD_DIR}/app-${FLAVOR}-v${VERSION_NAME}+${BUILD_NUMBER}-${ts}.apk"
+          cp "$APK_SRC" "$APK_DST"
+
+          INDEX="${BUILD_DIR}/index.md"
+          NEWLINE="| ${ts} | ${FLAVOR} | v${VERSION_NAME}+${BUILD_NUMBER} |"
+          if [ ! -f "$INDEX" ]; then
+            echo "| Timestamp (UTC) | Flavor | Version |" > "$INDEX"
+            echo "|---|---|---|" >> "$INDEX"
+          fi
+          TMP="${INDEX}.tmp"
+          head -n 2 "$INDEX" > "$TMP"
+          echo "$NEWLINE" >> "$TMP"
+          tail -n +3 "$INDEX" >> "$TMP"
+          mv "$TMP" "$INDEX"
+
+      - name: Commit changes
+        shell: bash
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add builds/
+          git commit -m "Add ${FLAVOR} APK v${VERSION_NAME}+${BUILD_NUMBER} [skip ci]" || echo "No changes to commit"
+
+      - name: Push builds with PAT
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.TOKEN }}
+          branch: ${{ github.ref_name }}
