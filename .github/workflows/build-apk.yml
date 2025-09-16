@@ -1,0 +1,120 @@
+# name: Android Flavored APK Builds
+
+# on:
+#   workflow_dispatch:
+#     inputs:
+#       flavor:
+#         description: "Flavor to build"
+#         type: choice
+#         required: true
+#         options: [dev, staging, prod]
+#         default: dev
+#   push:
+#     branches: [ main ]
+
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest
+#     env:
+#       FLAVOR: ${{ github.event.inputs.flavor || 'dev' }}
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+#         with:
+#           fetch-depth: 0
+#           persist-credentials: false
+
+#       - name: Setup Java
+#         uses: actions/setup-java@v4
+#         with:
+#           distribution: temurin
+#           java-version: '17'
+
+#       - name: Setup Flutter
+#         uses: subosito/flutter-action@v2
+#         with:
+#           channel: 'stable'
+
+#       - name: Flutter pub get
+#         run: flutter pub get
+
+#       - name: Compute VERSION_NAME and next BUILD_NUMBER per flavor
+#         shell: bash
+#         run: |
+#           set -e
+#           VERSION_LINE=$(grep '^version:' pubspec.yaml | head -1 | awk '{print $2}')
+#           VERSION_NAME="${VERSION_LINE%%+*}"
+#           BUILD_DIR="builds/${FLAVOR}"
+#           mkdir -p "${BUILD_DIR}"
+
+#           # Scan existing APK filenames to get the last versionCode (+N before .apk)
+#           LAST_CODE=$(ls -1 ${BUILD_DIR}/*.apk 2>/dev/null | sed -nE 's/.*\+([0-9]+)\.apk$/\1/p' | sort -n | tail -1)
+#           NEXT_CODE=$(( ${LAST_CODE:-0} + 1 ))
+
+#           echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
+#           echo "BUILD_NUMBER=$NEXT_CODE" >> $GITHUB_ENV
+#           echo "BUILD_DIR=$BUILD_DIR" >> $GITHUB_ENV
+
+#       # Optional: setup signing with a keystore from secrets if needed
+#       # - name: Decode Android keystore
+#       #   run: echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/keystore.jks
+#       #   env:
+#       #     ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+#       # - name: Setup key.properties
+#       #   run: |
+#       #     cat > android/key.properties << 'EOF'
+#       #     storeFile=keystore.jks
+#       #     storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+#       #     keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+#       #     keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+#       #     EOF
+
+#       - name: Build APK (release, flavored)
+#         run: |
+#           flutter build apk \
+#             --flavor $FLAVOR \
+#             --dart-define=FLAVOR=$FLAVOR \
+#             --release \
+#             --build-name="$VERSION_NAME" \
+#             --build-number="$BUILD_NUMBER"
+
+#       - name: Collect APK into builds/<flavor> and update index
+#         shell: bash
+#         run: |
+#           set -e
+#           ts=$(date -u +'%Y%m%d-%H%M%S')
+
+#           # Try two known output locations depending on Flutter/Gradle version
+#           APK_SRC="build/app/outputs/flutter-apk/app-${FLAVOR}-release.apk"
+#           if [ ! -f "$APK_SRC" ]; then
+#             APK_SRC="build/app/outputs/apk/${FLAVOR}/release/app-${FLAVOR}-release.apk"
+#           fi
+
+#           APK_DST="${BUILD_DIR}/app-${FLAVOR}-v${VERSION_NAME}+${BUILD_NUMBER}-${ts}.apk"
+#           cp "$APK_SRC" "$APK_DST"
+
+#           INDEX="${BUILD_DIR}/index.md"
+#           NEWLINE="| ${ts} | ${FLAVOR} | v${VERSION_NAME}+${BUILD_NUMBER} |"
+#           if [ ! -f "$INDEX" ]; then
+#             echo "| Timestamp (UTC) | Flavor | Version |" > "$INDEX"
+#             echo "|---|---|---|" >> "$INDEX"
+#           fi
+#           TMP="${INDEX}.tmp"
+#           head -n 2 "$INDEX" > "$TMP"
+#           echo "$NEWLINE" >> "$TMP"
+#           tail -n +3 "$INDEX" >> "$TMP"
+#           mv "$TMP" "$INDEX"
+
+#       - name: Commit changes
+#         shell: bash
+#         run: |
+#           git config --local user.email "github-actions[bot]@users.noreply.github.com"
+#           git config --local user.name "github-actions[bot]"
+#           git add builds/
+#           git commit -m "Add ${FLAVOR} APK v${VERSION_NAME}+${BUILD_NUMBER} [skip ci]" || echo "No changes to commit"
+
+#       - name: Push builds with PAT
+#         uses: ad-m/github-push-action@master
+#         with:
+#           github_token: ${{ secrets.TOKEN }}
+#           branch: ${{ github.ref_name }}

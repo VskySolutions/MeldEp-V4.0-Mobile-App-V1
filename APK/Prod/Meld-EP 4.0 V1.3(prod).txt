@@ -1,0 +1,20 @@
+08-29-2025
+Meld-EP Mobile App — V1.2 (release summary)
+Major Highlights
+Improved navigation & data safety: added a confirmation dialog for leaving screens with unsaved changes and a floating Go Back button (applies to Fill Timesheet, Add Timesheet, Time-in/Time-out).
+General UI polish for Time-in / Time-out screens.
+UI Improvements
+Time-in / Time-out Details break table now shows total break minutes at the bottom.
+Apply Leave card UI updated to display employee names for admin roles.
+New Filters
+Added filter fields for My Task & Activity (Task Status) and Timesheet (Week / From / To).
+Timesheet rules & UX improvements
+“Remember Me” on login now functional.
+Movement register: new entries reset to defaults and use today’s date so they appear immediately.
+Selected task in My Task / Activity is cleared only after Save & Close.
+selectedTasks cleared when applying filters, removing chips, or refreshing — except during Load More.
+Added maximum-hours validation to prevent unrealistic hour entries.
+Users can edit/delete only the timesheets they created.
+Added username preview on timesheet cards.
+Blocked filling timesheets for the next day.
+Filter Clear button now only resets values and does not close the filter panel.

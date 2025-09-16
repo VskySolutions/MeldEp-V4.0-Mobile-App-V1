@@ -1,0 +1,29 @@
+09-01-2025
+Added a View action to the My Task and Activity card to display task details to the user.
+Added an Edit action to the My Task and Activity card, allowing users to update estimated hours and task description.
+Currently working on an expandable and draggable floating widget for timer actions in My Task and Activity. The widget will show the timer in collapsed mode, and on expand, will provide additional options like Stop, Restart, and Fill to Timesheet.
+
+09-03-2025
+Created a custom floating, draggable, and expandable timer widget for the My Task and Activity card actions. Currently working on implementing its functionalities to support user interactions.
+
+09-04-2025
+Completed the floating timer widget functionality:
+Info: Shows task name and project name
+Pause/Start: Controls the timer
+Restart: Resets the timer
+Delete: Removes the floating timer
+Send: Lets the user fill the timesheet with the time tracked
+Improved the floating timer widget with:
+Auto Dock: The timer automatically docks to the side of the screen
+Auto Collapse: If the timer is expanded and the user taps anywhere on the screen, it collapses automatically
+Restricted Movement: The timer cannot be dragged outside the screen
+
+09-05-2025
+Added a screen Add/View Notes for My Task and Activity card Note action
+Users can add, edit, and delete notes
+Added a table to show previously added notes
+In the table, the note field shows a popup card with full details to save space and improve the UI
+Added an option in the My Task and Activity card to mark a task as inactive
+A confirmation dialog appears before inactivation
+Increased the width of all filters and made them responsive so content is clearer and easier to read
+Improved the bottom card UI by allowing drag/pull down to collapse along with close (X) button for better usability

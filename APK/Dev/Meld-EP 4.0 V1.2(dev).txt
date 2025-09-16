@@ -1,0 +1,31 @@
+08/20/2025
+Created a dedicated services folder structure for each app feature (e.g., AuthService, HomeService, TimesheetService, etc.).
+Moved API call logic from components and feature files into their service files.
+Moved all validators, formats, extensions, converters, and filters into separate reusable files for better consistency.
+Ensured these shared resources are used throughout the app for uniformity and easy updates.
+Created reusable widgets for the Home screen's Time-In and Time-Out buttons, along with an arrow-based date picker for the movement register, all designed with enhanced responsive styles for better cross-device compatibility.
+
+08/21/2025
+Developed a reusable Text Input Dropdown component and integrated it across all filters.
+Built a filter widgets for My Tasks and Activities, Timesheet, Leave Application, and Time-in/Time-out.
+Designed and implemented reusable filter outline buttons, replacing existing ones in all filters for consistency.
+Created a reusable filter chip component that displays applied filters and integrated it across all screens utilizing filters.
+Created a reusable Date Input Field and applied it across the app wherever a date picker is used.
+
+08/22/2025
+Tested the app on a real device and fixed some small UI and functionality issues.
+Added a Cancel button on the Break form to make it easier to close.
+Added a message "All Items Loaded" at the bottom of lists after the Load More option for better user experience.
+(Changes applied to: Movement Register, My Tasks and Activities, Timesheet, Apply Leave, Time-in/Time-out)
+Added a message "Pull down to refresh content" at the bottom of screens that support pull-to-refresh.
+(Changes applied to: Home, My Tasks and Activities, Timesheet, Apply Leave, Time-in/Time-out)
+Added a popup card on logout to improve the user interface.
+Updated login logic to allow only users with a valid Employee ID to log in.
+
+
+
+
+
+
+
+

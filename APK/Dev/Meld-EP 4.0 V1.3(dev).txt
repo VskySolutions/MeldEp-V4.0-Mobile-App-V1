@@ -1,0 +1,23 @@
+08-25-2025
+Added a confirmation dialog: “Are you sure you want to leave without saving?” when users try to go back from screens like Fill Timesheet and Add Timesheet. This helps prevent accidental data loss.
+Added a floating Go Back button at the bottom right for easier access.
+(Changes applied to: Fill Timesheet, Add Timesheet, and Time-in/Time-out Details screens)
+Improved the UI of the Time-in/Time-out and Time-in/Time-out Details screens.
+
+08-26-2025
+Improved the UI of Time-in/Time-out Details screen break table to display total break minutes in bottom.
+Made changes with Apply Leave screen card UI to show employee names to admin roles.
+
+08-28-2025
+Added filter fields in My Task And Activity(Task Status) and Timesheet(Week Filter, From Date and To Date).
+
+08-29-2025
+Made “Remember Me” on the login screen functional.
+When adding a movement register, all fields are reset to default and the date is set to today so the new entry shows immediately.
+In the Fill Timesheet flow, the selected task in My Task and Activity is only cleared after the user Save & Close.
+Cleared selectedTasks when a filter is applied, when a filter chip is removed, or on refresh — except when using Load More.
+Added maximum hours validation to prevent entering unreasonably large hour values.
+Users can edit or delete only the timesheets they created.
+Added a user name preview on the timesheet card.
+Prevented filling a timesheet for the next day.
+In filters, the Clear button now only clears filter values and does not close the filter panel.
