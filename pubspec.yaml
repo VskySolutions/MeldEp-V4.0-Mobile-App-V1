@@ -86,7 +86,7 @@ flutter:
   assets:
     - assets/images/meld-epLogo.png
     - config/.env.dev
-    - config/.env.staging
+    - config/.env.uat
     - config/.env.prod
   #   - images/a_dot_ham.jpeg
 
