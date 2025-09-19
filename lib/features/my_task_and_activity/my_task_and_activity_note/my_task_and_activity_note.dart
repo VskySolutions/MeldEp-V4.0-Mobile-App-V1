@@ -166,6 +166,8 @@ class _MyTaskAndActivityNoteScreenState extends State<MyTaskAndActivityNoteScree
 
   /// Prepares an existing note for editing by loading it into the editor.
   void _onEditPressed(TaskNoteDetailsModel note) {
+    print(note.noteId);
+    print(note.note);
     setState(() {
       _noteId = note.noteId;
       _noteFieldController.text = note.note;

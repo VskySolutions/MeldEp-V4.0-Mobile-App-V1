@@ -82,12 +82,12 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
   void _disposeAllCardControllers() {
     for (final card in _timesheetCardsList) {
       final c = card.inputFieldsController;
-      c?.field1?.dispose();
-      c?.field2?.dispose();
-      c?.field3?.dispose();
-      c?.field4?.dispose();
-      c?.field5?.dispose();
-      c?.field6?.dispose();
+      c?.projectDropdownController?.dispose();
+      c?.moduleDropdownController?.dispose();
+      c?.TaskDropdownController?.dispose();
+      c?.activityDropdownController?.dispose();
+      c?.activityDetailsFieldController?.dispose();
+      c?.hoursFieldController?.dispose();
     }
   }
 
@@ -328,8 +328,8 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
         "${_selectedDate.month.toString().padLeft(2, '0')}/${_selectedDate.day.toString().padLeft(2, '0')}/${_selectedDate.year}";
 
     final timesheetLineModel = _timesheetCardsList.map((card) {
-      final description = card.inputFieldsController?.field5?.text ?? "";
-      final hoursStr = card.inputFieldsController?.field6?.text ?? "0";
+      final description = card.inputFieldsController?.activityDetailsFieldController?.text ?? "";
+      final hoursStr = card.inputFieldsController?.hoursFieldController?.text ?? "0";
       final hours = double.tryParse(hoursStr) ?? 0.0;
       final guid = _createGuid();
 
@@ -403,11 +403,11 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
               ? (card.activityId ?? '')
               : (original?.projectActivityId ?? ''),
           "description": card != null
-              ? (card.inputFieldsController?.field5?.text ?? '')
+              ? (card.inputFieldsController?.activityDetailsFieldController?.text ?? '')
               : (original?.description ?? ''),
           "hours": card != null
               ? (double.tryParse(
-                    card.inputFieldsController?.field6?.text ?? '',
+                    card.inputFieldsController?.hoursFieldController?.text ?? '',
                   ) ??
                   0.0)
               : (original?.hours ?? 0.0),
@@ -433,20 +433,20 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
           "projectTaskId":
               card != null ? (card.taskId ?? '') : (original?.task?.id ?? ''),
           "moduleName": card != null
-              ? (card.inputFieldsController?.field2?.text ?? '')
+              ? (card.inputFieldsController?.moduleDropdownController?.text ?? '')
               : (original?.projectModule?.name ?? ''),
           "taskName": card != null
-              ? (card.inputFieldsController?.field3?.text ?? '')
+              ? (card.inputFieldsController?.TaskDropdownController?.text ?? '')
               : (original?.task?.name ?? ''),
           "projectName": card != null
-              ? (card.inputFieldsController?.field1?.text ?? '')
+              ? (card.inputFieldsController?.projectDropdownController?.text ?? '')
               : (original?.project?.name ?? ''),
           "rowCounter": index + 1,
           "timesheetId": widget.timesheetId,
           "isMyTaskActivity": false,
           "flag": "Edit",
           "projectActivityName": card != null
-              ? (card.inputFieldsController?.field4?.text ?? '')
+              ? (card.inputFieldsController?.activityDropdownController?.text ?? '')
               : (original?.projectActivity?.name ?? ''),
         };
       }),
@@ -457,8 +457,8 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
   Map<String, dynamic> _buildUpdatePayloadForNewLine(
     TimesheetCardsModel card,
   ) {
-    final description = card.inputFieldsController?.field5?.text ?? "";
-    final hoursStr = card.inputFieldsController?.field6?.text ?? "0";
+    final description = card.inputFieldsController?.activityDetailsFieldController?.text ?? "";
+    final hoursStr = card.inputFieldsController?.hoursFieldController?.text ?? "0";
     final hours = double.tryParse(hoursStr) ?? 0.0;
     final guid = _createGuid();
 
@@ -489,8 +489,8 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
     bool hasError = false;
 
     for (var t in _timesheetCardsList) {
-      final desc = t.inputFieldsController?.field5?.text.trim() ?? '';
-      final hrs = t.inputFieldsController?.field6?.text.trim() ?? '';
+      final desc = t.inputFieldsController?.activityDetailsFieldController?.text.trim() ?? '';
+      final hrs = t.inputFieldsController?.hoursFieldController?.text.trim() ?? '';
 
       // t.detailsError = Validators.validateDescription(
       //   desc,
@@ -499,19 +499,19 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
       t.hoursError = Validators.validateHours(hrs, fieldName: "Hours");
 
       t.projectError = Validators.validateText(
-        t.inputFieldsController?.field1?.text,
+        t.inputFieldsController?.projectDropdownController?.text,
         fieldName: "Project name",
       );
       t.moduleError = Validators.validateText(
-        t.inputFieldsController?.field2?.text,
+        t.inputFieldsController?.moduleDropdownController?.text,
         fieldName: "Module name",
       );
       t.taskError = Validators.validateText(
-        t.inputFieldsController?.field3?.text,
+        t.inputFieldsController?.TaskDropdownController?.text,
         fieldName: "Task name",
       );
       // t.activityError = Validators.validateText(
-      //   t.inputFieldsController?.field4?.text,
+      //   t.inputFieldsController?.activityDropdownController?.text,
       //   fieldName: "Activity name",
       // );
 
@@ -652,12 +652,12 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
   void _onAddLinePressed() {
     setState(() {
       final newControllers = FieldControllerModel(
-        field1: TextEditingController(text: ''),
-        field2: TextEditingController(text: ''),
-        field3: TextEditingController(text: ''),
-        field4: TextEditingController(text: ''),
-        field5: TextEditingController(text: ''),
-        field6: TextEditingController(text: ''),
+        projectDropdownController: TextEditingController(text: ''),
+        moduleDropdownController: TextEditingController(text: ''),
+        TaskDropdownController: TextEditingController(text: ''),
+        activityDropdownController: TextEditingController(text: ''),
+        activityDetailsFieldController: TextEditingController(text: ''),
+        hoursFieldController: TextEditingController(text: ''),
       );
 
       _timesheetCardsList.add(
@@ -867,23 +867,23 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
                                   ) {
                                     card.projectId = suggestion.id.toString();
                                     _loadModuleOptionsForProject(index);
-                                    cardInputFieldController?.field1?.text =
+                                    cardInputFieldController?.projectDropdownController?.text =
                                         suggestion.name.toString();
                                     setState(() {
                                       card.projectError = null;
 
                                       // Clear dependent fields
-                                      cardInputFieldController?.field2 =
+                                      cardInputFieldController?.moduleDropdownController =
                                           TextEditingController();
                                       card.projectModulesDropdown = [];
                                       card.moduleId = '';
 
-                                      cardInputFieldController?.field3 =
+                                      cardInputFieldController?.TaskDropdownController =
                                           TextEditingController();
                                       card.projectTaskDropdown = [];
                                       card.taskId = '';
 
-                                      cardInputFieldController?.field4 =
+                                      cardInputFieldController?.activityDropdownController =
                                           TextEditingController();
                                       card.projectActivityDropdown = [];
                                       card.activityId = '';
@@ -932,21 +932,21 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
                                                     card.projectId = '';
                                                     // Clear dependent fields
                                                     cardInputFieldController
-                                                            ?.field2 =
+                                                            ?.moduleDropdownController =
                                                         TextEditingController();
                                                     card.projectModulesDropdown =
                                                         [];
                                                     card.moduleId = '';
 
                                                     cardInputFieldController
-                                                            ?.field3 =
+                                                            ?.TaskDropdownController =
                                                         TextEditingController();
                                                     card.projectTaskDropdown =
                                                         [];
                                                     card.taskId = '';
 
                                                     cardInputFieldController
-                                                            ?.field4 =
+                                                            ?.activityDropdownController =
                                                         TextEditingController();
                                                     card.projectActivityDropdown =
                                                         [];
@@ -978,7 +978,7 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
                                       },
                                     );
                                   },
-                                  controller: cardInputFieldController?.field1,
+                                  controller: cardInputFieldController?.projectDropdownController,
                                 ),
                                 SizedBox(height: 10),
 
@@ -1012,17 +1012,17 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
                                   ) {
                                     card.moduleId = suggestion.id.toString();
                                     _loadTaskOptionsForModule(index);
-                                    cardInputFieldController?.field2?.text =
+                                    cardInputFieldController?.moduleDropdownController?.text =
                                         suggestion.name.toString();
                                     setState(() {
                                       card.moduleError = null;
 
-                                      cardInputFieldController?.field3 =
+                                      cardInputFieldController?.TaskDropdownController =
                                           TextEditingController();
                                       card.projectTaskDropdown = [];
                                       card.taskId = '';
 
-                                      cardInputFieldController?.field4 =
+                                      cardInputFieldController?.activityDropdownController =
                                           TextEditingController();
                                       card.projectActivityDropdown = [];
                                       card.activityId = '';
@@ -1071,14 +1071,14 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
                                                     card.moduleId = '';
 
                                                     cardInputFieldController
-                                                            ?.field3 =
+                                                            ?.TaskDropdownController =
                                                         TextEditingController();
                                                     card.projectTaskDropdown =
                                                         [];
                                                     card.taskId = '';
 
                                                     cardInputFieldController
-                                                            ?.field4 =
+                                                            ?.activityDropdownController =
                                                         TextEditingController();
                                                     card.projectActivityDropdown =
                                                         [];
@@ -1110,7 +1110,7 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
                                       },
                                     );
                                   },
-                                  controller: cardInputFieldController?.field2,
+                                  controller: cardInputFieldController?.moduleDropdownController,
                                 ),
                                 SizedBox(height: 10),
 
@@ -1144,12 +1144,12 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
                                   ) {
                                     card.taskId = suggestion.id.toString();
                                     _loadActivityOptionsForTaskAndDate(index);
-                                    cardInputFieldController?.field3?.text =
+                                    cardInputFieldController?.TaskDropdownController?.text =
                                         suggestion.name.toString();
                                     setState(() {
                                       card.taskError = null;
 
-                                      cardInputFieldController?.field4 =
+                                      cardInputFieldController?.activityDropdownController =
                                           TextEditingController();
                                       card.projectActivityDropdown = [];
                                       card.activityId = '';
@@ -1198,7 +1198,7 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
                                                     card.taskId = '';
 
                                                     cardInputFieldController
-                                                            ?.field4 =
+                                                            ?.activityDropdownController =
                                                         TextEditingController();
                                                     card.projectActivityDropdown =
                                                         [];
@@ -1230,7 +1230,7 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
                                       },
                                     );
                                   },
-                                  controller: cardInputFieldController?.field3,
+                                  controller: cardInputFieldController?.TaskDropdownController,
                                 ),
                                 SizedBox(height: 10),
 
@@ -1263,7 +1263,7 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
                                     TimesheetDropdownValuesModel suggestion,
                                   ) {
                                     card.activityId = suggestion.id.toString();
-                                    cardInputFieldController?.field4?.text =
+                                    cardInputFieldController?.activityDropdownController?.text =
                                         suggestion.name.toString();
                                     setState(() {
                                       card.activityError = null;
@@ -1339,7 +1339,7 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
                                       },
                                     );
                                   },
-                                  controller: cardInputFieldController?.field4,
+                                  controller: cardInputFieldController?.activityDropdownController,
                                 ),
                                 SizedBox(height: 10),
                                 Column(
@@ -1356,11 +1356,11 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
                                       ),
                                       child: HtmlEmailEditor(
                                         initialHtml: cardInputFieldController
-                                            ?.field5?.text,
+                                            ?.activityDetailsFieldController?.text,
                                         editorHeight: 140,
                                         onChanged: (html) {
                                           cardInputFieldController
-                                              ?.field5?.text = html;
+                                              ?.activityDetailsFieldController?.text = html;
                                           setState(() {
                                             card.detailsError =
                                                 Validators.validateDescription(
@@ -1374,7 +1374,7 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
                                     SizedBox(height: 10),
                                     TextFormField(
                                       controller:
-                                          cardInputFieldController?.field6,
+                                          cardInputFieldController?.hoursFieldController,
                                       decoration: InputDecoration(
                                         isDense: true,
                                         border: OutlineInputBorder(),
@@ -1561,16 +1561,16 @@ class TimesheetCardsModel {
     final activity = (json['projectActivity'] ?? {}) as Map<String, dynamic>;
 
     final controllers = FieldControllerModel(
-      field1: TextEditingController(text: project['name']?.toString() ?? ''),
-      field2: TextEditingController(
+      projectDropdownController: TextEditingController(text: project['name']?.toString() ?? ''),
+      moduleDropdownController: TextEditingController(
         text: projectModule['name']?.toString() ?? '',
       ),
-      field3: TextEditingController(text: task['name']?.toString() ?? ''),
-      field4: TextEditingController(text: activity['name']?.toString() ?? ''),
-      field5: TextEditingController(
+      TaskDropdownController: TextEditingController(text: task['name']?.toString() ?? ''),
+      activityDropdownController: TextEditingController(text: activity['name']?.toString() ?? ''),
+      activityDetailsFieldController: TextEditingController(
         text: json['description']?.toString() ?? '',
       ),
-      field6: TextEditingController(
+      hoursFieldController: TextEditingController(
         text: json['hours'] != null ? json['hours'].toString() : '',
       ),
     );
@@ -1597,26 +1597,26 @@ class TimesheetDropdownValuesModel {
 }
 
 class FieldControllerModel {
-  TextEditingController? field1;
-  TextEditingController? field2;
-  TextEditingController? field3;
-  TextEditingController? field4;
-  TextEditingController? field5;
-  TextEditingController? field6;
+  TextEditingController? projectDropdownController;
+  TextEditingController? moduleDropdownController;
+  TextEditingController? TaskDropdownController;
+  TextEditingController? activityDropdownController;
+  TextEditingController? activityDetailsFieldController;
+  TextEditingController? hoursFieldController;
 
   FieldControllerModel({
-    TextEditingController? field1,
-    TextEditingController? field2,
-    TextEditingController? field3,
-    TextEditingController? field4,
-    TextEditingController? field5,
-    TextEditingController? field6,
-  })  : field1 = field1 ?? TextEditingController(),
-        field2 = field2 ?? TextEditingController(),
-        field3 = field3 ?? TextEditingController(),
-        field4 = field4 ?? TextEditingController(),
-        field5 = field5 ?? TextEditingController(),
-        field6 = field6 ?? TextEditingController();
+    TextEditingController? projectDropdownController,
+    TextEditingController? moduleDropdownController,
+    TextEditingController? TaskDropdownController,
+    TextEditingController? activityDropdownController,
+    TextEditingController? activityDetailsFieldController,
+    TextEditingController? hoursFieldController,
+  })  : projectDropdownController = projectDropdownController ?? TextEditingController(),
+        moduleDropdownController = moduleDropdownController ?? TextEditingController(),
+        TaskDropdownController = TaskDropdownController ?? TextEditingController(),
+        activityDropdownController = activityDropdownController ?? TextEditingController(),
+        activityDetailsFieldController = activityDetailsFieldController ?? TextEditingController(),
+        hoursFieldController = hoursFieldController ?? TextEditingController();
 }
 
 class ProjectNamesModel {

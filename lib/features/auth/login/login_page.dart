@@ -169,7 +169,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(height: spacing),
                     _buildPasswordField(theme),
                     SizedBox(height: spacing * 0.8),
-                    _buildRememberMeAndForgotPassword(),
+                    _buildRememberMeAndForgotPassword(context),
                     SizedBox(height: size.height * 0.05),
                     _buildLoginButton(size),
                     SizedBox(height: size.height * 0.08),
@@ -245,7 +245,7 @@ class _LoginScreenState extends State<LoginScreen> {
       decoration: InputDecoration(
         errorText: _passwordError,
         labelText: LoginStrings.passwordLabel,
-        hintText: LoginStrings.passwordLabel,
+        hintText: LoginStrings.passwordHint,
         prefixIcon: IconButton(
           icon: Icon(
             _isPasswordObscured ? Icons.visibility_off : Icons.visibility,
@@ -272,7 +272,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // Builds the remember-me checkbox and forgot-password link row.
-  Widget _buildRememberMeAndForgotPassword() {
+  Widget _buildRememberMeAndForgotPassword(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -293,7 +293,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ],
         ),
         TextButton(
-          onPressed: _isLoading ? null : () {},
+          onPressed:() {context.push('/forgotPassword');},
           child: const Text(
             LoginStrings.forgotPassword,
             style: TextStyle(

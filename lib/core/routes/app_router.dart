@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:test_project/boot/auth.dart';
+import 'package:test_project/features/auth/forgot_password/forgot_password_screen.dart';
 import 'package:test_project/features/home/home.dart';
 import 'package:test_project/features/my_task_and_activity/fill_timesheet/fill_timesheet_screen.dart';
 import 'package:test_project/features/my_task_and_activity/my_task_and_activity_edit/my_task_and_activity_edit.dart';
@@ -34,6 +35,12 @@ class AppRouter {
         name: 'login',
         path: '/login',
         builder: (_, __) => const LoginScreen(),
+      ),
+
+      GoRoute(
+        name: 'forgotPassword',
+        path: '/forgotPassword',
+        builder: (_, __) => const ForgotPasswordScreen(),
       ),
 
       // Non-tab detail routes: can remain as-is
@@ -186,13 +193,18 @@ class AppRouter {
         ],
       ),
     ],
-    redirect: (context, state) {
-      final loggedIn = AuthService.instance.isLoggedIn;
-      final loggingIn = state.uri.path == '/login';
-      if (!loggedIn && !loggingIn) return '/login';
-      if (loggedIn && loggingIn) return '/main/home';
-      return null;
-    },
+redirect: (context, state) {
+  final loggedIn = AuthService.instance.isLoggedIn;
+  final currentPath = state.uri.path;
+  
+  // Define all public routes that don't require authentication
+  final publicRoutes = ['/login', '/forgotPassword'];
+  final isPublicRoute = publicRoutes.contains(currentPath);
+  
+  if (!loggedIn && !isPublicRoute) return '/login';
+  if (loggedIn && isPublicRoute) return '/main/home';
+  return null;
+},
   );
 }
 

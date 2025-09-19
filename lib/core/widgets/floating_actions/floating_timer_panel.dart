@@ -57,8 +57,8 @@ class DraggableTimerState extends State<DraggableTimer>
     restoreActiveTimer();
     _duration = widget.initialDuration;
     _ticker = Timer.periodic(Duration(seconds: 1), (_) {
-      if (_isRunning)
-        if (mounted) setState(() => _duration += Duration(seconds: 1));
+      if (_isRunning) if (mounted)
+        setState(() => _duration += Duration(seconds: 1));
     });
   }
 
@@ -153,8 +153,7 @@ class DraggableTimerState extends State<DraggableTimer>
         DateTime.now().toString(),
       );
 
-      bool success =
-          _wrappedBool(r1) &&
+      bool success = _wrappedBool(r1) &&
           _wrappedBool(r2) &&
           _wrappedBool(r3) &&
           _wrappedBool(r4);
@@ -274,7 +273,7 @@ class DraggableTimerState extends State<DraggableTimer>
 
       showCustomSnackBar(
         context,
-        message: 'Task Timer Deleted Succsessfully',
+        message: 'Task Timer reset Successfully',
         durationSeconds: 2,
       );
     } catch (e, st) {
@@ -312,7 +311,7 @@ class DraggableTimerState extends State<DraggableTimer>
 
             showCustomSnackBar(
               context,
-              message: 'Task Timer Deleted it succsessfully',
+              message: 'Task Timer Deleted it successfully',
               durationSeconds: 2,
             );
           } catch (e, st) {
@@ -425,8 +424,7 @@ class DraggableTimerState extends State<DraggableTimer>
     final h = MediaQuery.of(context).size.height;
     final panelTop = h * widget.panelTopOffset - widget.panelTopDelta;
 
-    final double initialLeft =
-        w -
+    final double initialLeft = w -
         widget.panelRight -
         widget.panelSize +
         (widget.panelSize - _collapsedSize) / 2;
@@ -447,8 +445,7 @@ class DraggableTimerState extends State<DraggableTimer>
     final minTop = 8.0 + MediaQuery.of(context).padding.top;
 
     final double bottomBarHeight = 56.0;
-    final maxTop =
-        sh -
+    final maxTop = sh -
         _collapsedSize -
         30.0 -
         MediaQuery.of(context).padding.bottom -
@@ -532,7 +529,6 @@ class DraggableTimerState extends State<DraggableTimer>
               },
             ),
           ),
-
         AnimatedPositioned(
           duration: Duration(milliseconds: 240),
           curve: Curves.easeOut,
@@ -648,7 +644,6 @@ class DraggableTimerState extends State<DraggableTimer>
               // timer display
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 14),
-
                 child: Text(
                   _expandedTimerFormat(_duration),
                   style: const TextStyle(

@@ -12,6 +12,7 @@ class CustomTypeAheadField extends StatefulWidget {
   final EdgeInsetsGeometry? contentPadding;
   final InputBorder? border;
   final TextStyle? textStyle;
+  final VoidCallback? onCleared;
 
   const CustomTypeAheadField({
     Key? key,
@@ -25,6 +26,7 @@ class CustomTypeAheadField extends StatefulWidget {
     this.contentPadding,
     this.border,
     this.textStyle,
+    this.onCleared,
   }) : super(key: key);
 
   @override
@@ -94,68 +96,69 @@ class _CustomTypeAheadFieldState extends State<CustomTypeAheadField> {
           _focusNode.unfocus();
           setState(() {});
         },
-        builder:
-            (
-              context,
-              TextEditingController fieldController,
-              FocusNode fieldFocusNode,
-            ) {
-              final showClear =
-                  fieldController.text.isNotEmpty && widget.enabled;
-              return TextField(
-                controller: fieldController,
-                focusNode: fieldFocusNode,
-                enabled: widget.enabled, // stays enabled even when loading
-                style: widget.textStyle,
-                decoration: InputDecoration(
-                  labelText: widget.label,
-                  border: widget.border ?? const OutlineInputBorder(),
-                  isDense: true,
-                  contentPadding:
-                      widget.contentPadding ??
-                      const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                  suffixIcon: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (showClear)
-                        IconButton(
-                          iconSize: 18,
-                          padding: const EdgeInsets.all(0),
-                          constraints: const BoxConstraints(),
-                          visualDensity: VisualDensity.compact,
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            fieldController.clear();
-                            widget.onChanged(null);
-                            fieldFocusNode.requestFocus();
-                            setState(() {});
-                          },
-                        ),
-                      IconButton(
-                        iconSize: 18,
-                        padding: const EdgeInsets.all(0),
-                        constraints: const BoxConstraints(),
-                        visualDensity: VisualDensity.compact,
-                        icon: Icon(
-                          fieldFocusNode.hasFocus
-                              ? Icons.arrow_drop_up
-                              : Icons.arrow_drop_down,
-                        ),
-                        onPressed: widget.enabled
-                            ? () {
-                                if (fieldFocusNode.hasFocus) {
-                                  fieldFocusNode.unfocus();
-                                } else {
-                                  fieldFocusNode.requestFocus();
-                                }
-                              }
-                            : null,
-                      ),
-                    ],
+        builder: (
+          context,
+          TextEditingController fieldController,
+          FocusNode fieldFocusNode,
+        ) {
+          final showClear = fieldController.text.isNotEmpty && widget.enabled;
+          return TextField(
+            controller: fieldController,
+            focusNode: fieldFocusNode,
+            enabled: widget.enabled, // stays enabled even when loading
+            style: widget.textStyle,
+            decoration: InputDecoration(
+              labelText: widget.label,
+              labelStyle: TextStyle(
+                color: Colors.black.withOpacity(0.5),
+              ),
+              border: widget.border ?? const OutlineInputBorder(),
+              isDense: true,
+              contentPadding: widget.contentPadding ??
+                  const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+              suffixIcon: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (showClear)
+                    IconButton(
+                      iconSize: 18,
+                      padding: const EdgeInsets.all(0),
+                      constraints: const BoxConstraints(),
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        fieldController.clear();
+                        widget.onChanged(null);
+                        widget.onCleared?.call();
+                        fieldFocusNode.requestFocus();
+                        setState(() {});
+                      },
+                    ),
+                  IconButton(
+                    iconSize: 18,
+                    padding: const EdgeInsets.all(0),
+                    constraints: const BoxConstraints(),
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(
+                      fieldFocusNode.hasFocus
+                          ? Icons.arrow_drop_up
+                          : Icons.arrow_drop_down,
+                    ),
+                    onPressed: widget.enabled
+                        ? () {
+                            if (fieldFocusNode.hasFocus) {
+                              fieldFocusNode.unfocus();
+                            } else {
+                              fieldFocusNode.requestFocus();
+                            }
+                          }
+                        : null,
                   ),
-                ),
-              );
-            },
+                ],
+              ),
+            ),
+          );
+        },
         controller: _controller,
         hideOnLoading: false, // show dropdown while loading
         loadingBuilder: (context) => const Padding(

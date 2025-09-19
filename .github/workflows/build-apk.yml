@@ -12,7 +12,7 @@ on:
         options: [dev, uat, prod]
 
 env:
-  VERSION_NAME: "1.0.0"  # Update this per release
+  VERSION_NAME: "1.0.1"  # Update this per release
 
 jobs:
   build:
@@ -108,15 +108,22 @@ jobs:
           cp "$APK_SRC" "${BUILD_DIR}/${BASE}.apk"
 
           # Human-readable UTC timestamp
-          TS_HUMAN=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          TS_HUMAN=$(date -u +'%m-%d-%Y %H:%M:%S UTC')
 
           # Write matching .md with timestamp and editable bullets
           cat > "${BUILD_DIR}/${BASE}.md" <<EOF
           Build: ${BASE}.apk
           Date: ${TS_HUMAN}
 
-          - Fix issue
-          - Improve UI
+          - Completed forgot password feature - Built a new screen and implemented all the required functionality.
+          - Fixed Android 13 navigation issues - Updated the AndroidManifest.xml and used compatible versions to resolve navigation problems on newer Android devices.
+          - Added missing info (i) icon on Task page to show activity description
+          - Fixed placeholder text style and default selection issue in Task Activity filter 
+          - Sorted project names alphabetically in My Task & Activity filter
+          - Fixed project filter to update and show correct modules when project changes
+          - Corrected field name color to blue in View Task Activity for consistency
+          - Added missing info (i) icon on View Task Activity to show activity description
+          - Fixed edit note issue in Task & Activity so changes save and display correctly
           EOF
 
       - name: Commit build artifacts
