@@ -18,13 +18,13 @@ class TaskFilterPopup extends StatefulWidget {
 
   // Callback shape retained (caller-managed)
   final Function(
-    String?,   // projectId
-    String?,   // projectModuleId
-    String?,   // assignedToId
-    String?,   // activityNameId
-    String?,   // activityStatusId
-    String?,   // taskStatusId
-    String?,   // activeStatus
+    String?, // projectId
+    String?, // projectModuleId
+    String?, // assignedToId
+    String?, // activityNameId
+    String?, // activityStatusId
+    String?, // taskStatusId
+    String?, // activeStatus
     DateTime?, // targetMonth
   ) onApplyFilter;
 
@@ -127,18 +127,21 @@ class _TaskFilterPopupState extends State<TaskFilterPopup> {
 
   Future<void> _fetchProjectNameIds() async {
     try {
-      final response = await MyTaskAndActivityService.instance
-          .fetchProjectNameIds();
+      final response =
+          await MyTaskAndActivityService.instance.fetchProjectNameIds();
       final List<dynamic> dataList = response.data;
 
-      final fetchedProjectNames = dataList
-          .map((json) => ProjectNamesModel.fromJson(json))
-          .toList();
+      final fetchedProjectNames =
+          dataList.map((json) => ProjectNamesModel.fromJson(json)).toList();
 
       setState(() {
         projectNamesDropdown = fetchedProjectNames
             .map((module) => {"id": module.id, "name": module.name})
-            .toList();
+            .toList()
+          ..sort((a, b) => a["name"]
+              .toString()
+              .toLowerCase()
+              .compareTo(b["name"].toString().toLowerCase()));
       });
     } catch (e) {
       // Handle error
@@ -157,9 +160,8 @@ class _TaskFilterPopupState extends State<TaskFilterPopup> {
           .fetchProjectModuleNameIds(projectId);
       final List<dynamic> dataList = response.data;
 
-      final fetchedProjectModels = dataList
-          .map((json) => ProjectNamesModel.fromJson(json))
-          .toList();
+      final fetchedProjectModels =
+          dataList.map((json) => ProjectNamesModel.fromJson(json)).toList();
 
       setState(() {
         projectModulesDropdown = fetchedProjectModels
@@ -177,13 +179,12 @@ class _TaskFilterPopupState extends State<TaskFilterPopup> {
 
   Future<void> _fetchEmployeeNameIds(String? siteId) async {
     try {
-      final response = await MyTaskAndActivityService.instance
-          .fetchEmployeeNameIds(siteId);
+      final response =
+          await MyTaskAndActivityService.instance.fetchEmployeeNameIds(siteId);
       final List<dynamic> dataList = response.data;
 
-      final fetchedEmployeeNames = dataList
-          .map((json) => EmployeeNamesModel.fromJson(json))
-          .toList();
+      final fetchedEmployeeNames =
+          dataList.map((json) => EmployeeNamesModel.fromJson(json)).toList();
 
       setState(() {
         employeeNamesDropdown = fetchedEmployeeNames
@@ -197,13 +198,12 @@ class _TaskFilterPopupState extends State<TaskFilterPopup> {
 
   Future<void> _fetchActivityName() async {
     try {
-      final response = await MyTaskAndActivityService.instance
-          .fetchActivityName();
+      final response =
+          await MyTaskAndActivityService.instance.fetchActivityName();
       final List<dynamic> dataList = response.data;
 
-      final fetchedActivityNames = dataList
-          .map((json) => ActivityNamesModel.fromJson(json))
-          .toList();
+      final fetchedActivityNames =
+          dataList.map((json) => ActivityNamesModel.fromJson(json)).toList();
 
       setState(() {
         activityNamesDropdown = fetchedActivityNames
@@ -217,13 +217,12 @@ class _TaskFilterPopupState extends State<TaskFilterPopup> {
 
   Future<void> _fetchTaskStatus() async {
     try {
-      final response = await MyTaskAndActivityService.instance
-          .fetchTaskStatus();
+      final response =
+          await MyTaskAndActivityService.instance.fetchTaskStatus();
       final List<dynamic> dataList = response.data;
 
-      final fetchedActivityStatus = dataList
-          .map((json) => ActivityStatusModel.fromJson(json))
-          .toList();
+      final fetchedActivityStatus =
+          dataList.map((json) => ActivityStatusModel.fromJson(json)).toList();
 
       setState(() {
         taskStatusDropdown = fetchedActivityStatus
@@ -237,8 +236,8 @@ class _TaskFilterPopupState extends State<TaskFilterPopup> {
 
   Future<void> _fetchActivityStatus() async {
     try {
-      final response = await MyTaskAndActivityService.instance
-          .fetchActivityStatus();
+      final response =
+          await MyTaskAndActivityService.instance.fetchActivityStatus();
       final List<dynamic> dataList = response.data;
 
       final fetchedActivityStatus = dataList
@@ -262,107 +261,108 @@ class _TaskFilterPopupState extends State<TaskFilterPopup> {
       title: Text('Filter'),
       backgroundColor: Colors.white,
       content: SizedBox(
-      width: MediaQuery.of(context).size.width * 0.95,
-      child: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Project Name
-            CustomTypeAheadField(
-              items: projectNamesDropdown,
-              selectedId: _tempProjectId,
-              label: "Project Name",
-              enabled: !_isLoading,
-              isLoading: _isLoading,
-              onChanged: (value) {
-                setState(() => _tempProjectId = value);
-                _fetchProjectModuleNameIds(value);
-                // Clear dependent fields
-                setState(() {
-                  _tempProjectModuleId = null;
-                  projectModulesDropdown = [];
-                });
-              },
-            ),
-            SizedBox(height: 14),
+        width: MediaQuery.of(context).size.width * 0.95,
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              // Project Name
+              CustomTypeAheadField(
+                  items: projectNamesDropdown,
+                  selectedId: _tempProjectId,
+                  label: "Project Name",
+                  enabled: !_isLoading,
+                  isLoading: _isLoading,
+                  onChanged: (value) {
+                    setState(() => _tempProjectId = value);
+                    _fetchProjectModuleNameIds(value);
+                  },
+                  onCleared: () {
+                    setState(() {
+                      _tempProjectId = null;
+                      _tempProjectModuleId = null;
+                      projectModulesDropdown = [];
+                    });
+                  }),
+              SizedBox(height: 14),
 
-            // Project Module
-            CustomTypeAheadField(
-              items: projectModulesDropdown,
-              selectedId: _tempProjectModuleId,
-              label: "Project Module",
-              enabled: projectModulesDropdown.isNotEmpty,
-              isLoading: _isProjectModulesLoading,
-              onChanged: (value) {
-                setState(() => _tempProjectModuleId = value);
-              },
-            ),
-            SizedBox(height: 14),
+              // Project Module
+              CustomTypeAheadField(
+                items: projectModulesDropdown,
+                selectedId: _tempProjectModuleId,
+                label: "Project Module",
+                enabled: projectModulesDropdown.isNotEmpty,
+                isLoading: _isProjectModulesLoading,
+                onChanged: (value) {
+                  setState(() => _tempProjectModuleId = value);
+                },
+              ),
+              SizedBox(height: 14),
 
-            // Activity Owner
-            CustomTypeAheadField(
-              items: employeeNamesDropdown,
-              selectedId: _tempAssignedToId,
-              label: "Activity Owner",
-              enabled: !_isLoading,
-              isLoading: _isLoading,
-              onChanged: (value) {
-                setState(() => _tempAssignedToId = value);
-              },
-            ),
-            SizedBox(height: 14),
+              // Activity Owner
+              CustomTypeAheadField(
+                items: employeeNamesDropdown,
+                selectedId: _tempAssignedToId,
+                label: "Activity Owner",
+                enabled: !_isLoading,
+                isLoading: _isLoading,
+                onChanged: (value) {
+                  setState(() => _tempAssignedToId = value);
+                },
+              ),
+              SizedBox(height: 14),
 
-            // Activity Name
-            CustomTypeAheadField(
-              items: activityNamesDropdown,
-              selectedId: _tempActivityNameId,
-              label: "Activity Name",
-              enabled: !_isLoading,
-              isLoading: _isLoading,
-              onChanged: (value) {
-                setState(() => _tempActivityNameId = value);
-              },
-            ),
-            SizedBox(height: 14),
+              // Activity Name
+              CustomTypeAheadField(
+                items: activityNamesDropdown,
+                selectedId: _tempActivityNameId,
+                label: "Activity Name",
+                enabled: !_isLoading,
+                isLoading: _isLoading,
+                onChanged: (value) {
+                  setState(() => _tempActivityNameId = value);
+                },
+              ),
+              SizedBox(height: 14),
 
-            // Activity Status
-            CustomTypeAheadField(
-              items: activityStatusDropdown,
-              selectedId: _tempActivityStatusId,
-              label: "Activity Status",
-              enabled: !_isLoading,
-              isLoading: _isLoading,
-              onChanged: (value) {
-                setState(() => _tempActivityStatusId = value);
-              },
-            ),
-            SizedBox(height: 14),
+              // Activity Status
+              CustomTypeAheadField(
+                items: activityStatusDropdown,
+                selectedId: _tempActivityStatusId,
+                label: "Activity Status",
+                enabled: !_isLoading,
+                isLoading: _isLoading,
+                onChanged: (value) {
+                  setState(() => _tempActivityStatusId = value);
+                },
+              ),
+              SizedBox(height: 14),
 
-            CustomTypeAheadField(
-              items: taskStatusDropdown,
-              selectedId: _tempTaskStatusId,
-              label: "Task Status",
-              enabled: !_isLoading,
-              isLoading: _isLoading,
-              onChanged: (value) {
-                setState(() => _tempTaskStatusId = value);
-              },
-            ),
-            SizedBox(height: 14),
+              CustomTypeAheadField(
+                items: taskStatusDropdown,
+                selectedId: _tempTaskStatusId,
+                label: "Task Status",
+                enabled: !_isLoading,
+                isLoading: _isLoading,
+                onChanged: (value) {
+                  setState(() => _tempTaskStatusId = value);
+                },
+              ),
+              SizedBox(height: 14),
 
-            // Status
-            CustomTypeAheadField(
-              items: activeStatusDropdownValues,
-              selectedId: _tempActiveStatus,
-              label: "Status",
-              enabled: !_isLoading,
-              isLoading: _isLoading,
-              onChanged: (value) {
-                setState(() => _tempActiveStatus = value);
-              },
-            ),
-          ],
+              // Status
+              CustomTypeAheadField(
+                items: activeStatusDropdownValues,
+                selectedId: _tempActiveStatus,
+                label: "Status",
+                enabled: !_isLoading,
+                isLoading: _isLoading,
+                onChanged: (value) {
+                  setState(() => _tempActiveStatus = value);
+                },
+              ),
+            ],
+          ),
         ),
-      ),
       ),
       actions: [
         Row(

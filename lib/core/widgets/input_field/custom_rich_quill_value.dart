@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:flutter_quill_delta_from_html/flutter_quill_delta_from_html.dart';
@@ -20,7 +21,8 @@ class HtmlEmailEditor extends StatefulWidget {
 }
 
 class _HtmlEmailEditorState extends State<HtmlEmailEditor> {
-  late final QuillController _controller;
+  QuillController? _controller;
+  StreamSubscription<dynamic>? _docSub;
   late final FocusNode _focusNode;
   late final ScrollController _scrollController;
 
@@ -30,9 +32,13 @@ class _HtmlEmailEditorState extends State<HtmlEmailEditor> {
     _focusNode = FocusNode();
     _scrollController = ScrollController();
 
-    // Build Document from initialHtml if provided
+    // initialize controller from initialHtml (may be null/empty)
+    _initControllerFromHtml(widget.initialHtml);
+  }
+
+  void _initControllerFromHtml(String? html) {
+    // create Document from HTML (or empty Document)
     final Document doc = () {
-      final html = widget.initialHtml;
       if (html != null && html.trim().isNotEmpty) {
         final delta = HtmlToDelta().convert(html);
         return Document.fromDelta(delta);
@@ -40,26 +46,46 @@ class _HtmlEmailEditorState extends State<HtmlEmailEditor> {
       return Document();
     }();
 
+    // cancel old subscription and dispose old controller
+    _docSub?.cancel();
+    _controller?.dispose();
+
+    // create controller
     _controller = QuillController(
       document: doc,
       selection: const TextSelection.collapsed(offset: 0),
       config: const QuillControllerConfig(),
     );
 
-    // Emit HTML on changes (Delta -> HTML)
-    _controller.document.changes.listen((_) {
-      final deltaJson = _controller.document.toDelta().toJson();
+    // listen for document changes and emit HTML
+    _docSub = _controller!.document.changes.listen((_) {
+      final deltaJson = _controller!.document.toDelta().toJson();
       final html = QuillDeltaToHtmlConverter(
         List.castFrom(deltaJson),
         ConverterOptions.forEmail(),
       ).convert();
       widget.onChanged?.call(html);
     });
+
+    // ensure UI updates to use the new controller
+    setState(() {});
+  }
+
+  @override
+  void didUpdateWidget(covariant HtmlEmailEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If initialHtml changed, recreate the document/controller
+    final oldHtml = oldWidget.initialHtml ?? '';
+    final newHtml = widget.initialHtml ?? '';
+    if (newHtml != oldHtml) {
+      _initControllerFromHtml(newHtml);
+    }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _docSub?.cancel();
+    _controller?.dispose();
     _focusNode.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -67,11 +93,20 @@ class _HtmlEmailEditorState extends State<HtmlEmailEditor> {
 
   @override
   Widget build(BuildContext context) {
+    // If controller not yet ready, show a small placeholder
+    final controller = _controller;
+    if (controller == null) {
+      return SizedBox(
+        height: widget.editorHeight,
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         QuillSimpleToolbar(
-          controller: _controller,
+          controller: controller,
           config: const QuillSimpleToolbarConfig(
             multiRowsDisplay: false,
             showDividers: false,
@@ -89,7 +124,7 @@ class _HtmlEmailEditorState extends State<HtmlEmailEditor> {
         SizedBox(
           height: widget.editorHeight,
           child: QuillEditor.basic(
-            controller: _controller,
+            controller: controller,
             focusNode: _focusNode,
             scrollController: _scrollController,
             config: const QuillEditorConfig(

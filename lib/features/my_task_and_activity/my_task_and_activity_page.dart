@@ -4,6 +4,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:test_project/core/dialogs/confirmation_dialog.dart';
+import 'package:test_project/core/flavor/flavor.dart';
 import 'package:test_project/core/services/local_storage.dart';
 import 'package:test_project/core/theme/app_colors.dart';
 import 'package:test_project/core/utils/extensions.dart';
@@ -610,7 +611,9 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
                                                       ),
                                                     ),
                                                   ),
+                                                  if(isDev)
                                                   SizedBox(width: 8),
+                                                  if(isDev)
                                                   Material(
                                                     color: Colors.transparent,
                                                     child: InkWell(
@@ -780,6 +783,31 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
                                                       style: TextStyle(
                                                         fontWeight:
                                                             FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                    Tooltip(
+                                                      message: task
+                                                          .activityNameDescription,
+                                                      preferBelow: true,
+                                                      child: GestureDetector(
+                                                        onTap: () {
+                                                          Fluttertoast
+                                                              .showToast(
+                                                            msg:
+                                                                "Press and hold to view activity description",
+                                                            toastLength: Toast
+                                                                .LENGTH_SHORT,
+                                                            gravity:
+                                                                ToastGravity
+                                                                    .BOTTOM,
+                                                          );
+                                                        },
+                                                        child: Icon(
+                                                          Icons.info_outline,
+                                                          size: 18,
+                                                          color:
+                                                              Colors.grey[800],
+                                                        ),
                                                       ),
                                                     ),
                                                   ],
@@ -966,6 +994,7 @@ class ProjectTaskActivityModel {
   final double? estimateHours;
   final String? targetMonth;
   final String? projectId;
+  final String? activityNameDescription;
 
   ProjectTaskActivityModel({
     required this.projectName,
@@ -977,6 +1006,7 @@ class ProjectTaskActivityModel {
     this.estimateHours,
     this.targetMonth,
     this.projectId,
+    this.activityNameDescription,
   });
 
   factory ProjectTaskActivityModel.fromJson(Map<String, dynamic> json) {
@@ -990,6 +1020,7 @@ class ProjectTaskActivityModel {
       estimateHours: (json['estimateHours'] as num?)?.toDouble(),
       targetMonth: json['targetMonth'],
       projectId: json['id'] ?? '',
+      activityNameDescription: json['activityNameDescription'] ?? '',
     );
   }
 }
