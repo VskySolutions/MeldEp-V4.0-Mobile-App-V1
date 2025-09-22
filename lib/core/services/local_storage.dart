@@ -68,15 +68,26 @@ class LocalStorage {
 
   // Last Break Minutes (int)
   static Future<bool> setLastBreakMinutes(String minutes) => _prefs().then(
-    (p) => p.setString(StorageKeys.LAST_BREAK_MINUTES_KEY, minutes),
-  );
+        (p) => p.setString(StorageKeys.LAST_BREAK_MINUTES_KEY, minutes),
+      );
 
+  // ICS helpers
   static Future<String?> getLastBreakMinutes() =>
       _prefs().then((p) => p.getString(StorageKeys.LAST_BREAK_MINUTES_KEY));
 
   static Future<bool> clearLastBreakMinutes() =>
       _prefs().then((p) => p.remove(StorageKeys.LAST_BREAK_MINUTES_KEY));
 
+  static Future<bool> setIcsKey(String url) =>
+      _prefs().then((p) => p.setString(StorageKeys.ICS_KEY, url));
+
+  static Future<String?> getIcsKey() =>
+      _prefs().then((p) => p.getString(StorageKeys.ICS_KEY));
+
+  static Future<bool> clearIcsKey() =>
+      _prefs().then((p) => p.remove(StorageKeys.ICS_KEY));
+
+      
   // ---------------- TIMER STORAGE ----------------
 
   // Activity ID

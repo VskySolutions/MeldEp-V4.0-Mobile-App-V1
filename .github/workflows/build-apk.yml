@@ -12,7 +12,7 @@ on:
         options: [dev, uat, prod]
 
 env:
-  VERSION_NAME: "1.0.1"  # Update this per release
+  VERSION_NAME: "1.0.2"  # Update this per release
 
 jobs:
   build:
@@ -115,16 +115,16 @@ jobs:
           Build: ${BASE}.apk
           Date: ${TS_HUMAN}
 
-          - Removed timer feature - Hide the timer functionality from the My Task and Activity card actions as requested.
-          - Completed forgot password feature - Built a new screen and implemented all the required functionality.
-          - Fixed Android 13 navigation issues - Updated the AndroidManifest.xml and used compatible versions to resolve navigation problems on newer Android devices.
-          - Added missing info (i) icon on Task page to show activity description
-          - Fixed placeholder text style and default selection issue in Task Activity filter 
-          - Sorted project names alphabetically in My Task & Activity filter
-          - Fixed project filter to update and show correct modules when project changes
-          - Corrected field name color to blue in View Task Activity for consistency
-          - Added missing info (i) icon on View Task Activity to show activity description
-          - Fixed edit note issue in Task & Activity so changes save and display correctly
+          - Created a screen for "Meetings", accessible from the bottom tab bar
+          - Added a card with input field to get the ICS URL from the user
+          - Added filter functionality on the meetings screen so users can select by month and year.
+          - Integrated API to fetch meeting data and display it in cards.
+          - Added functionality to create a timesheet directly from the calendar screen, where users can preview the meeting subject, select Project > Module > Task > Activity, and enter activity details to add timesheet lines.
+          - Added instructions on "how to get your Microsoft ICS URL" in the “Add ICS URL” form.
+          - Displaying timesheet line details if they are already filled.
+          - Added functionality to delete timesheet lines.
+          - Replaced Start/End Date with Created/Updated Date in View Task Activity
+
           EOF
 
       - name: Commit build artifacts
