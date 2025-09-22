@@ -13,5 +13,5 @@ class StorageKeys {
   static const String TASK_NAME_TIMER           = 'task_name_timer';
   static const String ACTIVITY_NAME_TIMER       = 'activity_name_timer';
   static const String ACTIVITY_TIMER_TIMESTAMP  = 'activity_timer_timestamp';
-  
+  static const String ICS_KEY                   = 'ICS_KEY';
 }
