@@ -221,7 +221,8 @@ class DraggableTimerState extends State<DraggableTimer>
         showCustomSnackBar(
           context,
           message: 'Task Timer Paused',
-          backgroundColor: Colors.amber,
+          backgroundColor: AppColors.WARNING,
+          contentColor: Colors.black,
         );
       } else {
         showCustomSnackBar(
@@ -336,7 +337,8 @@ class DraggableTimerState extends State<DraggableTimer>
       showCustomSnackBar(
         context,
         message: 'Task timer cannot be less than 1 min',
-        backgroundColor: Colors.amber,
+        backgroundColor: AppColors.WARNING,
+        contentColor: Colors.black,
       );
       return;
     }

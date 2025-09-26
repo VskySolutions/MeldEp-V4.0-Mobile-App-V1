@@ -13,6 +13,7 @@ import 'package:test_project/core/theme/app_colors.dart';
 import 'package:test_project/core/utils/extensions.dart';
 import 'package:test_project/core/utils/validators.dart';
 import 'package:test_project/core/widgets/input_field/custom_rich_quill_value.dart';
+import 'package:test_project/core/widgets/input_field/custom_type_ahead_field.dart';
 import 'package:test_project/core/widgets/snackbar/custom_snackbar.dart';
 import 'package:test_project/features/meetings/meetings_service.dart';
 import 'package:test_project/features/timesheet/timesheet_service.dart';
@@ -37,6 +38,15 @@ class AddTimesheetLinesScreen extends StatefulWidget {
   @override
   _AddTimesheetLinesScreenState createState() =>
       _AddTimesheetLinesScreenState();
+}
+
+List<Map<String, String>> toItems(List<TimesheetDropdownValuesModel> src) {
+  return src
+      .map((r) => {
+            'id': (r.id ?? '').toString(),
+            'name': (r.name ?? '').toString(),
+          })
+      .toList();
 }
 
 class _AddTimesheetLinesScreenState extends State<AddTimesheetLinesScreen> {
@@ -208,7 +218,8 @@ class _AddTimesheetLinesScreenState extends State<AddTimesheetLinesScreen> {
 
   /// Loads modules for the selected project and maps them into dropdown items.
   Future<void> _loadModuleOptionsForProject(int index) async {
-    setState(() => _isLoading = true);
+    final card = _timesheetCardsList[index];
+    setState(() => card.isLoadingModules = true);
 
     try {
       final projectId = _timesheetCardsList[index].projectId;
@@ -237,13 +248,14 @@ class _AddTimesheetLinesScreenState extends State<AddTimesheetLinesScreen> {
     } catch (e) {
       debugPrint('fetchModuleNameIds error: $e');
     } finally {
-      setState(() => _isLoading = false);
+      setState(() => card.isLoadingModules = false);
     }
   }
 
   /// Loads tasks for the selected project+module and maps them into dropdown items.
   Future<void> _loadTaskOptionsForModule(int index) async {
-    setState(() => _isLoading = true);
+    final card = _timesheetCardsList[index];
+    setState(() => card.isLoadingTasks = true);
 
     try {
       final projectId = _timesheetCardsList[index].projectId;
@@ -277,13 +289,14 @@ class _AddTimesheetLinesScreenState extends State<AddTimesheetLinesScreen> {
     } catch (e) {
       debugPrint('fetchTaskNameIds error: $e');
     } finally {
-      setState(() => _isLoading = false);
+      setState(() => card.isLoadingTasks = false);
     }
   }
 
   /// Loads activities for the selected project+module+task and maps them into dropdown items.
   Future<void> _loadActivityOptionsForTaskAndDate(int index) async {
-    setState(() => _isLoading = true);
+    final card = _timesheetCardsList[index];
+    setState(() => card.isLoadingActivities = true);
 
     try {
       final projectId = _timesheetCardsList[index].projectId;
@@ -321,7 +334,7 @@ class _AddTimesheetLinesScreenState extends State<AddTimesheetLinesScreen> {
     } catch (e) {
       debugPrint('fetchActivityNameIds error: $e');
     } finally {
-      setState(() => _isLoading = false);
+      setState(() => card.isLoadingActivities = false);
     }
   }
 
@@ -446,10 +459,10 @@ class _AddTimesheetLinesScreenState extends State<AddTimesheetLinesScreen> {
         t.inputFieldsController?.TaskDropdownController?.text,
         fieldName: "Task name",
       );
-      // t.activityError = Validators.validateText(
-      //   t.inputFieldsController?.activityDropdownController?.text,
-      //   fieldName: "Activity name",
-      // );
+      t.activityError = Validators.validateText(
+        t.inputFieldsController?.activityDropdownController?.text,
+        fieldName: "Activity name",
+      );
 
       if (t.detailsError != null ||
           t.hoursError != null ||
@@ -949,533 +962,254 @@ class _AddTimesheetLinesScreenState extends State<AddTimesheetLinesScreen> {
                                     ],
                                   ),
                                   SizedBox(height: 12),
-                                  TypeAheadField(
-                                    suggestionsCallback: (pattern) async {
-                                      if (pattern.isEmpty) {
-                                        return _projectDropdownList;
-                                      }
-                                      return _projectDropdownList
-                                          .where(
-                                            (r) =>
-                                                r.name!.toLowerCase().contains(
-                                                      pattern.toLowerCase(),
-                                                    ),
-                                          )
-                                          .toList();
-                                    },
-                                    itemBuilder: (
-                                      context,
-                                      TimesheetDropdownValuesModel suggestion,
-                                    ) {
-                                      return ListTile(
-                                        title: Text(
-                                          suggestion.name.toString(),
-                                        ),
-                                      );
-                                    },
-                                    onSelected: (
-                                      TimesheetDropdownValuesModel suggestion,
-                                    ) {
-                                      card.projectId = suggestion.id.toString();
-                                      _loadModuleOptionsForProject(index);
-                                      cardInputFieldController
+
+                                  // ===================== PROJECT FIELD =====================
+                                  CustomTypeAheadField(
+                                    items: toItems(_projectDropdownList),
+                                    selectedId: (card.projectId.isEmpty)
+                                        ? null
+                                        : card.projectId,
+                                    label: 'Project',
+                                    errorText: card.projectError,
+                                    suggestionsController:
+                                        card.typeahead.project,
+                                    isLoading: false,
+                                    onSelectedItem: (item) {
+                                      card
+                                          .inputFieldsController
                                           ?.projectDropdownController
-                                          ?.text = suggestion.name.toString();
+                                          ?.text = item?['name'] ?? '';
+                                    },
+                                    onChanged: (id) async {
                                       setState(() {
-                                        card.projectError = null;
-
-                                        // Clear dependent fields
-                                        cardInputFieldController
-                                                ?.moduleDropdownController =
-                                            TextEditingController();
-                                        card.projectModulesDropdown = [];
+                                        card.projectId = id ?? '';
                                         card.moduleId = '';
-
-                                        cardInputFieldController
-                                                ?.TaskDropdownController =
-                                            TextEditingController();
-                                        card.projectTaskDropdown = [];
                                         card.taskId = '';
-
-                                        cardInputFieldController
-                                                ?.activityDropdownController =
-                                            TextEditingController();
-                                        card.projectActivityDropdown = [];
                                         card.activityId = '';
-                                      });
-                                    },
-                                    loadingBuilder: (context) => const Padding(
-                                      padding: EdgeInsets.all(8.0),
-                                      child: Center(
-                                        child: CircularProgressIndicator(
-                                          color: AppColors.PRIMARY,
-                                        ),
-                                      ),
-                                    ),
-                                    emptyBuilder: (context) => const Padding(
-                                      padding: EdgeInsets.all(8.0),
-                                      child: Text('No project found'),
-                                    ),
-                                    builder:
-                                        (context, fieldController, focusNode) {
-                                      final showClear =
-                                          fieldController.text.isNotEmpty;
-                                      return TextField(
-                                        controller: fieldController,
-                                        focusNode: focusNode,
-                                        decoration: InputDecoration(
-                                          labelText: 'Project',
-                                          errorText: card.projectError,
-                                          border: const OutlineInputBorder(),
-                                          isDense: false,
-                                          contentPadding:
-                                              const EdgeInsets.symmetric(
-                                            vertical: 10,
-                                            horizontal: 12,
-                                          ),
-                                          suffixIcon: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              if (showClear)
-                                                IconButton(
-                                                  visualDensity:
-                                                      VisualDensity.compact,
-                                                  icon: const Icon(Icons.clear),
-                                                  onPressed: () {
-                                                    fieldController.clear();
-                                                    setState(() {
-                                                      card.projectId = '';
-                                                      // Clear dependent fields
-                                                      cardInputFieldController
-                                                              ?.moduleDropdownController =
-                                                          TextEditingController();
-                                                      card.projectModulesDropdown =
-                                                          [];
-                                                      card.moduleId = '';
-
-                                                      cardInputFieldController
-                                                              ?.TaskDropdownController =
-                                                          TextEditingController();
-                                                      card.projectTaskDropdown =
-                                                          [];
-                                                      card.taskId = '';
-
-                                                      cardInputFieldController
-                                                              ?.activityDropdownController =
-                                                          TextEditingController();
-                                                      card.projectActivityDropdown =
-                                                          [];
-                                                      card.activityId = '';
-                                                    });
-                                                  },
-                                                ),
-                                              IconButton(
-                                                visualDensity:
-                                                    VisualDensity.compact,
-                                                onPressed: () {
-                                                  focusNode.hasFocus
-                                                      ? focusNode.unfocus()
-                                                      : focusNode
-                                                          .requestFocus();
-                                                },
-                                                icon: Icon(
-                                                  focusNode.hasFocus
-                                                      ? Icons.arrow_drop_up
-                                                      : Icons.arrow_drop_down,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        onChanged: (value) {
-                                          setState(() {
-                                            card.projectId = '';
-                                          });
-                                        },
-                                      );
-                                    },
-                                    controller: cardInputFieldController
-                                        ?.projectDropdownController,
-                                  ),
-                                  SizedBox(height: 10),
-
-                                  /// ===================== MODULE FIELD =====================
-                                  TypeAheadField(
-                                    suggestionsCallback: (pattern) async {
-                                      await _loadModuleOptionsForProject(index);
-                                      if (pattern.isEmpty) {
-                                        return card.projectModulesDropdown;
-                                      }
-                                      return card.projectModulesDropdown
-                                          .where(
-                                            (r) =>
-                                                r.name!.toLowerCase().contains(
-                                                      pattern.toLowerCase(),
-                                                    ),
-                                          )
-                                          .toList();
-                                    },
-                                    itemBuilder: (
-                                      context,
-                                      TimesheetDropdownValuesModel suggestion,
-                                    ) {
-                                      return ListTile(
-                                        title: Text(
-                                          suggestion.name.toString(),
-                                        ),
-                                      );
-                                    },
-                                    onSelected: (
-                                      TimesheetDropdownValuesModel suggestion,
-                                    ) {
-                                      card.moduleId = suggestion.id.toString();
-                                      _loadTaskOptionsForModule(index);
-                                      cardInputFieldController
-                                          ?.moduleDropdownController
-                                          ?.text = suggestion.name.toString();
-                                      setState(() {
+                                        card.projectModulesDropdown = [];
+                                        card.projectTaskDropdown = [];
+                                        card.projectActivityDropdown = [];
                                         card.moduleError = null;
-
-                                        cardInputFieldController
-                                                ?.TaskDropdownController =
-                                            TextEditingController();
-                                        card.projectTaskDropdown = [];
-                                        card.taskId = '';
-
-                                        cardInputFieldController
-                                                ?.activityDropdownController =
-                                            TextEditingController();
-                                        card.projectActivityDropdown = [];
-                                        card.activityId = '';
-                                      });
-                                    },
-                                    loadingBuilder: (context) => const Padding(
-                                      padding: EdgeInsets.all(8.0),
-                                      child: Center(
-                                        child: CircularProgressIndicator(
-                                          color: AppColors.PRIMARY,
-                                        ),
-                                      ),
-                                    ),
-                                    emptyBuilder: (context) => const Padding(
-                                      padding: EdgeInsets.all(8.0),
-                                      child: Text('No module found'),
-                                    ),
-                                    builder:
-                                        (context, fieldController, focusNode) {
-                                      final showClear =
-                                          fieldController.text.isNotEmpty;
-                                      return TextField(
-                                        controller: fieldController,
-                                        focusNode: focusNode,
-                                        decoration: InputDecoration(
-                                          labelText: 'Module',
-                                          errorText: card.moduleError,
-                                          border: const OutlineInputBorder(),
-                                          isDense: false,
-                                          contentPadding:
-                                              const EdgeInsets.symmetric(
-                                            vertical: 10,
-                                            horizontal: 12,
-                                          ),
-                                          suffixIcon: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              if (showClear)
-                                                IconButton(
-                                                  visualDensity:
-                                                      VisualDensity.compact,
-                                                  icon: const Icon(Icons.clear),
-                                                  onPressed: () {
-                                                    fieldController.clear();
-                                                    setState(() {
-                                                      card.moduleId = '';
-
-                                                      cardInputFieldController
-                                                              ?.TaskDropdownController =
-                                                          TextEditingController();
-                                                      card.projectTaskDropdown =
-                                                          [];
-                                                      card.taskId = '';
-
-                                                      cardInputFieldController
-                                                              ?.activityDropdownController =
-                                                          TextEditingController();
-                                                      card.projectActivityDropdown =
-                                                          [];
-                                                      card.activityId = '';
-                                                    });
-                                                  },
-                                                ),
-                                              IconButton(
-                                                visualDensity:
-                                                    VisualDensity.compact,
-                                                onPressed: () {
-                                                  focusNode.hasFocus
-                                                      ? focusNode.unfocus()
-                                                      : focusNode
-                                                          .requestFocus();
-                                                },
-                                                icon: Icon(
-                                                  focusNode.hasFocus
-                                                      ? Icons.arrow_drop_up
-                                                      : Icons.arrow_drop_down,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        onChanged: (value) {
-                                          setState(() {
-                                            card.moduleId = '';
-                                          });
-                                        },
-                                      );
-                                    },
-                                    controller: cardInputFieldController
-                                        ?.moduleDropdownController,
-                                  ),
-                                  SizedBox(height: 10),
-
-                                  /// ===================== TASK FIELD =====================
-                                  TypeAheadField(
-                                    suggestionsCallback: (pattern) async {
-                                      await _loadTaskOptionsForModule(index);
-                                      if (pattern.isEmpty) {
-                                        return card.projectTaskDropdown;
-                                      }
-                                      return card.projectTaskDropdown
-                                          .where(
-                                            (r) =>
-                                                r.name!.toLowerCase().contains(
-                                                      pattern.toLowerCase(),
-                                                    ),
-                                          )
-                                          .toList();
-                                    },
-                                    itemBuilder: (
-                                      context,
-                                      TimesheetDropdownValuesModel suggestion,
-                                    ) {
-                                      return ListTile(
-                                        title: Text(
-                                          suggestion.name.toString(),
-                                        ),
-                                      );
-                                    },
-                                    onSelected: (
-                                      TimesheetDropdownValuesModel suggestion,
-                                    ) {
-                                      card.taskId = suggestion.id.toString();
-                                      _loadActivityOptionsForTaskAndDate(index);
-                                      cardInputFieldController
-                                          ?.TaskDropdownController
-                                          ?.text = suggestion.name.toString();
-                                      setState(() {
                                         card.taskError = null;
-
-                                        cardInputFieldController
-                                                ?.activityDropdownController =
-                                            TextEditingController();
-                                        card.projectActivityDropdown = [];
-                                        card.activityId = '';
-                                      });
-                                    },
-                                    loadingBuilder: (context) => const Padding(
-                                      padding: EdgeInsets.all(8.0),
-                                      child: Center(
-                                        child: CircularProgressIndicator(
-                                          color: AppColors.PRIMARY,
-                                        ),
-                                      ),
-                                    ),
-                                    emptyBuilder: (context) => const Padding(
-                                      padding: EdgeInsets.all(8.0),
-                                      child: Text('No task found'),
-                                    ),
-                                    builder:
-                                        (context, fieldController, focusNode) {
-                                      final showClear =
-                                          fieldController.text.isNotEmpty;
-                                      return TextField(
-                                        controller: fieldController,
-                                        focusNode: focusNode,
-                                        decoration: InputDecoration(
-                                          labelText: 'Task',
-                                          errorText: card.taskError,
-                                          border: const OutlineInputBorder(),
-                                          isDense: false,
-                                          contentPadding:
-                                              const EdgeInsets.symmetric(
-                                            vertical: 10,
-                                            horizontal: 12,
-                                          ),
-                                          suffixIcon: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              if (showClear)
-                                                IconButton(
-                                                  visualDensity:
-                                                      VisualDensity.compact,
-                                                  icon: const Icon(Icons.clear),
-                                                  onPressed: () {
-                                                    fieldController.clear();
-                                                    setState(() {
-                                                      card.taskId = '';
-
-                                                      cardInputFieldController
-                                                              ?.activityDropdownController =
-                                                          TextEditingController();
-                                                      card.projectActivityDropdown =
-                                                          [];
-                                                      card.activityId = '';
-                                                    });
-                                                  },
-                                                ),
-                                              IconButton(
-                                                visualDensity:
-                                                    VisualDensity.compact,
-                                                onPressed: () {
-                                                  focusNode.hasFocus
-                                                      ? focusNode.unfocus()
-                                                      : focusNode
-                                                          .requestFocus();
-                                                },
-                                                icon: Icon(
-                                                  focusNode.hasFocus
-                                                      ? Icons.arrow_drop_up
-                                                      : Icons.arrow_drop_down,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        onChanged: (value) {
-                                          setState(() {
-                                            card.taskId = '';
-                                          });
-                                        },
-                                      );
-                                    },
-                                    controller: cardInputFieldController
-                                        ?.TaskDropdownController,
-                                  ),
-                                  SizedBox(height: 10),
-
-                                  /// ===================== ACTIVITY FIELD =====================
-                                  TypeAheadField(
-                                    suggestionsCallback: (pattern) async {
-                                      await _loadActivityOptionsForTaskAndDate(
-                                          index);
-                                      if (pattern.isEmpty) {
-                                        return card.projectActivityDropdown;
-                                      }
-                                      return card.projectActivityDropdown
-                                          .where(
-                                            (r) =>
-                                                r.name!.toLowerCase().contains(
-                                                      pattern.toLowerCase(),
-                                                    ),
-                                          )
-                                          .toList();
-                                    },
-                                    itemBuilder: (
-                                      context,
-                                      TimesheetDropdownValuesModel suggestion,
-                                    ) {
-                                      return ListTile(
-                                        title: Text(
-                                          suggestion.name.toString(),
-                                        ),
-                                      );
-                                    },
-                                    onSelected: (
-                                      TimesheetDropdownValuesModel suggestion,
-                                    ) {
-                                      card.activityId =
-                                          suggestion.id.toString();
-                                      cardInputFieldController
-                                          ?.activityDropdownController
-                                          ?.text = suggestion.name.toString();
-                                      setState(() {
                                         card.activityError = null;
+                                        card
+                                            .inputFieldsController
+                                            ?.moduleDropdownController
+                                            ?.text = '';
+                                        card.inputFieldsController
+                                            ?.TaskDropdownController?.text = '';
+                                        card
+                                            .inputFieldsController
+                                            ?.activityDropdownController
+                                            ?.text = '';
+                                        card.isLoadingModules = true;
+                                      });
+                                      await _loadModuleOptionsForProject(index);
+                                      setState(
+                                          () => card.isLoadingModules = false);
+                                      card.typeahead.module.refresh();
+                                    },
+                                    onCleared: () {
+                                      setState(() {
+                                        card.projectId = '';
+                                        card.moduleId = '';
+                                        card.taskId = '';
+                                        card.activityId = '';
+                                        card.projectModulesDropdown = [];
+                                        card.projectTaskDropdown = [];
+                                        card.projectActivityDropdown = [];
+                                        card
+                                            .inputFieldsController
+                                            ?.projectDropdownController
+                                            ?.text = '';
+                                        card
+                                            .inputFieldsController
+                                            ?.moduleDropdownController
+                                            ?.text = '';
+                                        card.inputFieldsController
+                                            ?.TaskDropdownController?.text = '';
+                                        card
+                                            .inputFieldsController
+                                            ?.activityDropdownController
+                                            ?.text = '';
+                                      });
+                                      card.typeahead.module.refresh();
+                                      card.typeahead.task.refresh();
+                                      card.typeahead.activity.refresh();
+                                    },
+                                  ),
+                                  const SizedBox(height: 10),
+                                  // ===================== MODULE FIELD =====================
+                                  CustomTypeAheadField(
+                                    items: toItems(card.projectModulesDropdown),
+                                    selectedId: (card.moduleId.isEmpty)
+                                        ? null
+                                        : card.moduleId,
+                                    label: 'Module',
+                                    errorText: card.moduleError,
+                                    suggestionsController:
+                                        card.typeahead.module,
+                                    isLoading: card.isLoadingModules,
+                                    onOpen: () async {
+                                      if (card.projectModulesDropdown.isEmpty &&
+                                          card.projectId.isNotEmpty) {
+                                        setState(
+                                            () => card.isLoadingModules = true);
+                                        await _loadModuleOptionsForProject(
+                                            index);
+                                        setState(() =>
+                                            card.isLoadingModules = false);
+                                      }
+                                    },
+                                    onSelectedItem: (item) {
+                                      card
+                                          .inputFieldsController
+                                          ?.moduleDropdownController
+                                          ?.text = item?['name'] ?? '';
+                                    },
+                                    onChanged: (id) async {
+                                      setState(() {
+                                        card.moduleId = id ?? '';
+                                        card.taskId = '';
+                                        card.activityId = '';
+                                        card.projectTaskDropdown = [];
+                                        card.projectActivityDropdown = [];
+                                        card.taskError = null;
+                                        card.activityError = null;
+                                        card.inputFieldsController
+                                            ?.TaskDropdownController?.text = '';
+                                        card
+                                            .inputFieldsController
+                                            ?.activityDropdownController
+                                            ?.text = '';
+                                        card.isLoadingTasks =
+                                            (id ?? '').isNotEmpty;
+                                      });
+                                      if ((id ?? '').isNotEmpty) {
+                                        await _loadTaskOptionsForModule(index);
+                                      }
+                                      setState(
+                                          () => card.isLoadingTasks = false);
+                                      card.typeahead.task.refresh();
+                                      card.typeahead.activity.refresh();
+                                    },
+                                    onCleared: () {
+                                      setState(() {
+                                        card.moduleId = '';
+                                      });
+                                      card.typeahead.task.refresh();
+                                      card.typeahead.activity.refresh();
+                                    },
+                                  ),
+                                  const SizedBox(height: 10),
+                                  // ===================== TASK FIELD =====================
+                                  CustomTypeAheadField(
+                                    items: toItems(card.projectTaskDropdown),
+                                    selectedId: (card.taskId.isEmpty)
+                                        ? null
+                                        : card.taskId,
+                                    label: 'Task',
+                                    errorText: card.taskError,
+                                    suggestionsController: card.typeahead.task,
+                                    isLoading: card.isLoadingTasks,
+                                    onOpen: () async {
+                                      if (card.projectTaskDropdown.isEmpty &&
+                                          card.moduleId.isNotEmpty) {
+                                        setState(
+                                            () => card.isLoadingTasks = true);
+                                        await _loadTaskOptionsForModule(index);
+                                        setState(
+                                            () => card.isLoadingTasks = false);
+                                      }
+                                    },
+                                    onSelectedItem: (item) {
+                                      card
+                                          .inputFieldsController
+                                          ?.TaskDropdownController
+                                          ?.text = item?['name'] ?? '';
+                                    },
+                                    onChanged: (id) async {
+                                      setState(() {
+                                        card.taskId = id ?? '';
+                                        card.activityId = '';
+                                        card.projectActivityDropdown = [];
+                                        card.activityError = null;
+                                        card
+                                            .inputFieldsController
+                                            ?.activityDropdownController
+                                            ?.text = '';
+                                        card.isLoadingActivities =
+                                            (id ?? '').isNotEmpty;
+                                      });
+                                      if ((id ?? '').isNotEmpty) {
+                                        await _loadActivityOptionsForTaskAndDate(
+                                            index);
+                                      }
+                                      setState(() =>
+                                          card.isLoadingActivities = false);
+                                      card.typeahead.activity.refresh();
+                                    },
+                                    onCleared: () {
+                                      setState(() {
+                                        card.taskId = '';
+                                        card.activityId = '';
+                                        card.projectActivityDropdown = [];
+                                        card.inputFieldsController
+                                            ?.TaskDropdownController?.text = '';
+                                        card
+                                            .inputFieldsController
+                                            ?.activityDropdownController
+                                            ?.text = '';
+                                      });
+                                      card.typeahead.activity.refresh();
+                                    },
+                                  ),
+                                  const SizedBox(height: 10),
+                                  // ===================== ACTIVITY FIELD =====================
+                                  CustomTypeAheadField(
+                                    items:
+                                        toItems(card.projectActivityDropdown),
+                                    selectedId: (card.activityId.isEmpty)
+                                        ? null
+                                        : card.activityId,
+                                    label: 'Activity (Est. Hrs)',
+                                    errorText: card.activityError,
+                                    suggestionsController:
+                                        card.typeahead.activity,
+                                    isLoading: card.isLoadingActivities,
+                                    onOpen: () async {
+                                      if (card.projectActivityDropdown
+                                              .isEmpty &&
+                                          card.taskId.isNotEmpty) {
+                                        setState(() =>
+                                            card.isLoadingActivities = true);
+                                        await _loadActivityOptionsForTaskAndDate(
+                                            index);
+                                        setState(() =>
+                                            card.isLoadingActivities = false);
+                                      }
+                                    },
+                                    onSelectedItem: (item) {
+                                      card
+                                          .inputFieldsController
+                                          ?.activityDropdownController
+                                          ?.text = item?['name'] ?? '';
+                                    },
+                                    onChanged: (id) {
+                                      setState(
+                                          () => card.activityId = id ?? '');
+                                    },
+                                    onCleared: () {
+                                      setState(() {
+                                        card.activityId = '';
+                                        card
+                                            .inputFieldsController
+                                            ?.activityDropdownController
+                                            ?.text = '';
                                       });
                                     },
-                                    loadingBuilder: (context) => const Padding(
-                                      padding: EdgeInsets.all(8.0),
-                                      child: Center(
-                                        child: CircularProgressIndicator(
-                                          color: AppColors.PRIMARY,
-                                        ),
-                                      ),
-                                    ),
-                                    emptyBuilder: (context) => const Padding(
-                                      padding: EdgeInsets.all(8.0),
-                                      child: Text('No activity found'),
-                                    ),
-                                    builder:
-                                        (context, fieldController, focusNode) {
-                                      final showClear =
-                                          fieldController.text.isNotEmpty;
-                                      return TextField(
-                                        controller: fieldController,
-                                        focusNode: focusNode,
-                                        decoration: InputDecoration(
-                                          labelText: 'Activity (Est. Hrs)',
-                                          errorText: card.activityError,
-                                          border: const OutlineInputBorder(),
-                                          isDense: false,
-                                          contentPadding:
-                                              const EdgeInsets.symmetric(
-                                            vertical: 10,
-                                            horizontal: 12,
-                                          ),
-                                          suffixIcon: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              if (showClear)
-                                                IconButton(
-                                                  visualDensity:
-                                                      VisualDensity.compact,
-                                                  icon: const Icon(
-                                                    Icons.clear,
-                                                  ),
-                                                  onPressed: () {
-                                                    fieldController.clear();
-                                                    setState(() {
-                                                      card.activityId = '';
-                                                    });
-                                                  },
-                                                ),
-                                              IconButton(
-                                                visualDensity:
-                                                    VisualDensity.compact,
-                                                onPressed: () {
-                                                  focusNode.hasFocus
-                                                      ? focusNode.unfocus()
-                                                      : focusNode
-                                                          .requestFocus();
-                                                },
-                                                icon: Icon(
-                                                  focusNode.hasFocus
-                                                      ? Icons.arrow_drop_up
-                                                      : Icons.arrow_drop_down,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        onChanged: (value) {
-                                          setState(() {
-                                            card.activityId = '';
-                                          });
-                                        },
-                                      );
-                                    },
-                                    controller: cardInputFieldController
-                                        ?.activityDropdownController,
                                   ),
-                                  SizedBox(height: 10),
+                                  const SizedBox(height: 10),
                                   Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
@@ -1491,8 +1225,9 @@ class _AddTimesheetLinesScreenState extends State<AddTimesheetLinesScreen> {
                                           contentPadding:
                                               const EdgeInsets.all(8),
                                         ),
-                                        child: HtmlEmailEditor(
+                                        child: HtmlEditorInputField(
                                           // initialHtml: cardInputFieldController?.activityDetailsFieldController?.text,
+                                          showLessOptions: true,
                                           editorHeight: 140,
                                           onChanged: (html) {
                                             cardInputFieldController
@@ -1660,6 +1395,8 @@ class TimesheetCardsModel {
   String moduleId;
   String taskId;
   String activityId;
+  String activityDetails;
+  String activityHours;
   String? projectError;
   String? moduleError;
   String? taskError;
@@ -1667,6 +1404,12 @@ class TimesheetCardsModel {
   String? detailsError;
   String? hoursError;
   String? id;
+
+  final TypeaheadControllerGroup typeahead;
+
+  bool isLoadingModules;
+  bool isLoadingTasks;
+  bool isLoadingActivities;
 
   TimesheetCardsModel({
     this.inputFieldsController,
@@ -1677,8 +1420,14 @@ class TimesheetCardsModel {
     this.moduleId = '',
     this.taskId = '',
     this.activityId = '',
+    this.activityDetails = '',
+    this.activityHours = '',
     this.id,
-  });
+    TypeaheadControllerGroup? typeahead,
+    this.isLoadingModules = false,
+    this.isLoadingTasks = false,
+    this.isLoadingActivities = false,
+  }) : typeahead = typeahead ?? TypeaheadControllerGroup();
 
   factory TimesheetCardsModel.fromTimesheetLine(Map<String, dynamic> json) {
     final project = (json['project'] ?? {}) as Map<String, dynamic>;
@@ -1713,6 +1462,8 @@ class TimesheetCardsModel {
       moduleId: projectModule['id']?.toString() ?? '',
       taskId: task['id']?.toString() ?? '',
       activityId: activity['id']?.toString() ?? '',
+      activityDetails: json['description']?.toString() ?? '',
+      activityHours: json['hours'] != null ? json['hours'].toString() : '',
       id: json["id"] ?? '',
     );
   }
@@ -1751,6 +1502,24 @@ class FieldControllerModel {
         activityDetailsFieldController =
             activityDetailsFieldController ?? TextEditingController(),
         hoursFieldController = hoursFieldController ?? TextEditingController();
+}
+
+class TypeaheadControllerGroup {
+  final SuggestionsController<Map<String, String>> project =
+      SuggestionsController<Map<String, String>>();
+  final SuggestionsController<Map<String, String>> module =
+      SuggestionsController<Map<String, String>>();
+  final SuggestionsController<Map<String, String>> task =
+      SuggestionsController<Map<String, String>>();
+  final SuggestionsController<Map<String, String>> activity =
+      SuggestionsController<Map<String, String>>();
+
+  void dispose() {
+    project.dispose();
+    module.dispose();
+    task.dispose();
+    activity.dispose();
+  }
 }
 
 class ProjectNamesModel {

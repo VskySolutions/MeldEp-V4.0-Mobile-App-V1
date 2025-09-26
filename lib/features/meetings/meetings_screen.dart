@@ -105,7 +105,6 @@ class MeetingsScreenState extends State<MeetingsScreen> {
       return;
     }
     await LocalStorage.setIcsKey(url);
-    setState(() => _savedIcsUrl = url);
     await _refreshFromStoredKey();
   }
 
@@ -122,7 +121,7 @@ class MeetingsScreenState extends State<MeetingsScreen> {
     });
     showCustomSnackBar(
       context,
-      message: 'ICS key deleted',
+      message: 'ICS key removed successfully',
       backgroundColor: AppColors.ERROR,
     );
   }
@@ -135,10 +134,11 @@ class MeetingsScreenState extends State<MeetingsScreen> {
           message: 'No ICS key saved', backgroundColor: AppColors.ERROR);
       return;
     }
-    await _fetchAndBind(saved.trim());
+    await _LoadMeetingsDataByICS(saved.trim(), initialLoad: true);
   }
 
-  Future<void> _fetchAndBind(String icsUrl) async {
+  Future<void> _LoadMeetingsDataByICS(String icsUrl,
+      {bool initialLoad = false}) async {
     setState(() => _isFetching = true);
     try {
       final payload = {
@@ -153,6 +153,8 @@ class MeetingsScreenState extends State<MeetingsScreen> {
         final parsed = CalendarListResponse.fromJson(
           resp.data as Map<String, dynamic>,
         );
+
+        setState(() => _savedIcsUrl = icsUrl);
 
         final events = parsed.data.map((e) {
           final start = (e.startDateTimeCalendar != null &&
@@ -181,13 +183,21 @@ class MeetingsScreenState extends State<MeetingsScreen> {
         });
         _applyMonthYearFilter(resetPaging: true);
       } else {
+        if (initialLoad) {
+          LocalStorage.clearIcsKey();
+          setState(() => _savedIcsUrl = null);
+        }
         showCustomSnackBar(
           context,
-          message: 'Failed to fetch calendar (${resp.statusCode})',
+          message: 'Failed to load calendar data',
           backgroundColor: AppColors.ERROR,
         );
       }
     } catch (e) {
+      if (initialLoad) {
+        LocalStorage.clearIcsKey();
+        setState(() => _savedIcsUrl = null);
+      }
       showCustomSnackBar(
         context,
         message: 'Error: $e',
@@ -234,7 +244,7 @@ class MeetingsScreenState extends State<MeetingsScreen> {
             _selectedYear = y;
           });
           if (_savedIcsUrl != null && _savedIcsUrl!.isNotEmpty) {
-            _fetchAndBind(_savedIcsUrl!);
+            _LoadMeetingsDataByICS(_savedIcsUrl!);
           } else {
             _applyMonthYearFilter(resetPaging: true);
           }

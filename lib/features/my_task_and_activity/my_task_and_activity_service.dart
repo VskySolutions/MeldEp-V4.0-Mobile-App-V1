@@ -91,4 +91,8 @@ class MyTaskAndActivityService {
   Future<dynamic> makeTaskStatusActiveInactive( String? id, bool? status) async {
     return await Network.authDio.put('/project-activities/$id/$status');
   }
+
+  Future<dynamic> changeActivityStatus( Map<String, dynamic> payload) async {
+    return await Network.authDio.put('/project-activities/updateTaskActivityStatus', data: payload);
+  }
 }
