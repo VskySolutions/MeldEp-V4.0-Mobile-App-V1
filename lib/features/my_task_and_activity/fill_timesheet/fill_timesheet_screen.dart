@@ -49,6 +49,7 @@ class FillTimesheetScreenState extends State<FillTimesheetScreen> {
       <String, TextEditingController>{};
   final Map<String, TextEditingController> _hoursControllers =
       <String, TextEditingController>{};
+  final Map<String, String?> _activityDetailsInitial = <String, String?>{};
   final Map<String, String?> _activityDetailsErrors = <String, String?>{};
   final Map<String, String?> _hoursErrors = <String, String?>{};
 
@@ -205,7 +206,13 @@ class FillTimesheetScreenState extends State<FillTimesheetScreen> {
         );
 
         for (var project in _projectList) {
-          _activityDetailsControllers[project.id] = TextEditingController();
+          if (project.description.isNotEmpty) {
+            _activityDetailsInitial[project.id] = project.description;
+            _activityDetailsControllers[project.id] = TextEditingController(text: project.description);
+          } else {
+            _activityDetailsInitial[project.id] = null;
+            _activityDetailsControllers[project.id] = TextEditingController();
+          }
           if (widget.activityMins == null || widget.activityMins == 'null') {
             _hoursControllers[project.id] = TextEditingController();
           } else {
@@ -497,16 +504,15 @@ class FillTimesheetScreenState extends State<FillTimesheetScreen> {
                                         _activityDetailsErrors[project.id],
                                     contentPadding: const EdgeInsets.all(8),
                                   ),
-                                  child: HtmlEmailEditor(
+                                  child: HtmlEditorInputField(
+                                    showLessOptions: true,
                                     onChanged: (html) {
                                       _activityDetailsControllers[project.id]
                                           ?.text = html;
                                       _onFieldChanged(
                                           project.id, 'activity', html);
                                     },
-                                    initialHtml:
-                                        _activityDetailsControllers[project.id]
-                                            ?.text,
+                                    initialHtml: _activityDetailsInitial[project.id],
                                     editorHeight: 140,
                                   ),
                                 ),

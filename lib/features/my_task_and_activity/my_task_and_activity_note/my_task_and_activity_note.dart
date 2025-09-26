@@ -350,7 +350,7 @@ class _MyTaskAndActivityNoteScreenState
         isDense: true,
         contentPadding: EdgeInsets.all(8),
       ),
-      child: HtmlEmailEditor(
+      child: HtmlEditorInputField(
         editorHeight: 140,
         initialHtml: _noteFieldController.text,
         onChanged: (html) => _noteFieldController.text = html,

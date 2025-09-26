@@ -37,10 +37,6 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
   DateTime? _searchAppliedDate;
   String? _searchYear = DateTime.now().year.toString();
 
-  // Options (lists end with List)
-  final List<String> _yearOptionsList =
-      List.generate(10, (i) => (2021 + i).toString());
-
   // Data (lists end with List)
   List<LeaveRecord> _leaveRecordsList = <LeaveRecord>[];
 

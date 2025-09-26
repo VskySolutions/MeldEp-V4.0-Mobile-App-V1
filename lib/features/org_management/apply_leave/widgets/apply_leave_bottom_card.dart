@@ -12,6 +12,7 @@ import 'package:test_project/core/constants/formats.dart';
 import 'package:test_project/core/services/local_storage.dart';
 import 'package:test_project/core/theme/app_colors.dart';
 import 'package:test_project/core/utils/validators.dart';
+import 'package:test_project/core/widgets/input_field/custom_type_ahead_field.dart';
 import 'package:test_project/core/widgets/snackbar/custom_snackbar.dart';
 import 'package:test_project/features/org_management/org_management_service.dart';
 
@@ -45,6 +46,8 @@ class _ApplyLeaveFormSheetState extends State<ApplyLeaveFormSheet> {
   final TextEditingController _totalLeaveDaysController =
       TextEditingController();
   final TextEditingController _employeeNameController = TextEditingController();
+  final SuggestionsController<Map<String, String>> _leaveTypeSugCtrl =
+      SuggestionsController<Map<String, String>>();
 
   // Dates
   DateTime? _startDate;
@@ -185,12 +188,17 @@ class _ApplyLeaveFormSheetState extends State<ApplyLeaveFormSheet> {
       final response = await OrgManagementService.instance.applyLeave(formData);
 
       if (response.statusCode == 204) {
-        showCustomSnackBar(
-          context,
-          message: 'Leave applied successfully!',
-          durationSeconds: 2,
-        );
+        showCustomSnackBar(context,
+            message: 'Leave applied successfully!', durationSeconds: 2);
         context.pop();
+      } else if (response.statusCode == 400) {
+        final data = response.data;
+        final msg = (data is Map && data['message'] is String)
+            ? data['message'] as String
+            : 'Failed to apply leave';
+        setState(() => _isSubmitting = false);
+        showCustomSnackBar(context,
+            message: msg, durationSeconds: 3, backgroundColor: AppColors.ERROR);
       } else {
         throw Exception('Failed to apply leave');
       }
@@ -384,450 +392,414 @@ class _ApplyLeaveFormSheetState extends State<ApplyLeaveFormSheet> {
   @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.9,
-      builder: (_, ctl) => Stack(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
+        expand: false,
+        initialChildSize: 0.9,
+        builder: (context, ctl) {
+          final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+          const fabHeight = 56;
+          const fabBottomMargin = 16.00;
+
+          return Material(
               color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-            ),
-            padding: EdgeInsets.only(bottom: 60),
-            child: Column(
-              children: [
-                const SizedBox(height: 12),
-                Center(
-                  child: Container(
-                    height: 5,
-                    width: 45,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[400],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      const Expanded(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Text(
-                            'Apply Leave',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(16)),
+              child: Stack(
+                children: [
+                  CustomScrollView(
+                    controller: ctl,
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Column(
+                          children: [
+                            const SizedBox(
+                              height: 12,
                             ),
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => context.pop(),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  width: 500,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  color: Colors.lightBlue.shade300,
-                  child: _isLeaveCreditsLoading
-                      ? Center(
-                          child: CircularProgressIndicator(
-                            color: AppColors.PRIMARY,
-                          ),
-                        )
-                      : _leaveCreditsDetails != null
-                          ? Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Total Leaves: ${_leaveCreditsDetails!.totalLeaves} '
-                                  'Casual Leaves: ${_leaveCreditsDetails!.casualLeaves}',
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                SizedBox(height: 8),
-                                Text(
-                                  'Sick Leaves: ${_leaveCreditsDetails!.sickLeaves} '
-                                  'Leave Balance: ${_leaveCreditsDetails!.leaveBalance}',
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ],
-                            )
-                          : const Text('Leave details not available'),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Form(
-                      child: ListView(
-                        controller: ctl,
-                        children: [
-                          // Employee Name
-                          TextFormField(
-                            // initialValue: _employeeName,
-                            decoration: const InputDecoration(
-                              labelText: 'Employee Name *',
-                              border: OutlineInputBorder(),
-                              isDense: true,
-                            ),
-                            readOnly: true,
-                            controller: _employeeNameController,
-                          ),
-                          const SizedBox(height: 16),
-                          TypeAheadField(
-                            suggestionsCallback: (pattern) {
-                              return _leaveTypesList.where((item) {
-                                return item['name']!.toLowerCase().contains(
-                                      pattern.toLowerCase(),
-                                    );
-                              }).toList();
-                            },
-                            itemBuilder: (context, suggestion) {
-                              return ListTile(
-                                title: Text(suggestion['name'].toString()),
-                              );
-                            },
-                            onSelected: (suggestion) {
-                              setState(() {
-                                _selectedLeaveTypeId =
-                                    suggestion['id'].toString();
-                                _selectedLeaveTypeController.text =
-                                    suggestion['name'].toString();
-                                _leaveTypeError = null;
-                              });
-                            },
-                            loadingBuilder: (context) => const Padding(
-                              padding: EdgeInsets.all(8.0),
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  color: AppColors.PRIMARY,
+                            Center(
+                              child: Container(
+                                height: 5,
+                                width: 45,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[400],
+                                  borderRadius: BorderRadius.circular(4),
                                 ),
                               ),
                             ),
-                            emptyBuilder: (context) => const Padding(
-                              padding: EdgeInsets.all(8.0),
-                              child: Text('Leave type not found'),
-                            ),
-                            builder: (context, fieldController, focusNode) {
-                              final showClear = fieldController.text.isNotEmpty;
-                              return TextField(
-                                controller: fieldController,
-                                focusNode: focusNode,
-                                decoration: InputDecoration(
-                                  labelText: 'Leave Type *',
-                                  errorText: _leaveTypeError,
-                                  border: const OutlineInputBorder(),
-                                  isDense: false,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    vertical: 10,
-                                    horizontal: 12,
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
+                              child: Row(
+                                children: [
+                                  const Expanded(
+                                    child: Padding(
+                                      padding:
+                                          EdgeInsets.symmetric(vertical: 16),
+                                      child: Text(
+                                        'Apply Leave',
+                                        style: TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
                                   ),
-                                  suffixIcon: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (showClear)
-                                        IconButton(
-                                          visualDensity: VisualDensity.compact,
-                                          icon: const Icon(Icons.clear),
-                                          onPressed: () {
-                                            fieldController.clear();
-                                            setState(() {
-                                              _leaveTypeError = null;
-                                            });
-                                          },
+                                  IconButton(
+                                    icon: const Icon(Icons.close),
+                                    onPressed: () => context.pop(),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              width: 500,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
+                              color: Colors.lightBlue.shade300,
+                              child: _isLeaveCreditsLoading
+                                  ? Center(
+                                      child: CircularProgressIndicator(
+                                          color: AppColors.PRIMARY))
+                                  : _leaveCreditsDetails != null
+                                      ? Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.center,
+                                          children: [
+                                            Text(
+                                              'Total Leaves: ${_leaveCreditsDetails!.totalLeaves} Casual Leaves: ${_leaveCreditsDetails!.casualLeaves}',
+                                              style: const TextStyle(
+                                                  color: Colors.black,
+                                                  fontSize: 16),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              'Sick Leaves: ${_leaveCreditsDetails!.sickLeaves} Leave Balance: ${_leaveCreditsDetails!.leaveBalance}',
+                                              style: const TextStyle(
+                                                  color: Colors.black,
+                                                  fontSize: 16),
+                                            ),
+                                          ],
+                                        )
+                                      : const Text(
+                                          'Leave details not available'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SliverPadding(
+                        padding: EdgeInsets.fromLTRB(
+                          16,
+                          16,
+                          16,
+                          16 + fabHeight + fabBottomMargin + bottomInset,
+                        ),
+                        sliver: SliverToBoxAdapter(
+                          child: Form(
+                              child: Column(
+                            children: [
+                              // Employee Name
+                              TextFormField(
+                                // initialValue: _employeeName,
+                                decoration: const InputDecoration(
+                                  labelText: 'Employee Name *',
+                                  border: OutlineInputBorder(),
+                                  isDense: true,
+                                ),
+                                readOnly: true,
+                                controller: _employeeNameController,
+                              ),
+                              const SizedBox(height: 16),
+                              CustomTypeAheadField(
+                                items: _leaveTypesList,
+                                selectedId: _selectedLeaveTypeId,
+                                label: 'Leave Type *',
+                                errorText: _leaveTypeError,
+                                suggestionsController: _leaveTypeSugCtrl,
+                                isLoading: false,
+
+                                onSelectedItem: (item) {
+                                  _selectedLeaveTypeController.text =
+                                      item?['name'] ?? '';
+                                },
+
+                                onChanged: (id) {
+                                  setState(() {
+                                    _selectedLeaveTypeId = id ?? '';
+                                    _leaveTypeError = null;
+                                  });
+                                },
+
+                                onCleared: () {
+                                  setState(() {
+                                    _selectedLeaveTypeId = "";
+                                    _selectedLeaveTypeController.clear();
+                                    _leaveTypeError = null;
+                                  });
+                                },
+
+                                // Optional: if clearing should wipe selection upstream
+                                propagateOnClear: false,
+                              ),
+                              SizedBox(height: 16),
+                              TextField(
+                                controller: _dateStartController,
+                                keyboardType: TextInputType.datetime,
+                                onChanged: (value) =>
+                                    _onDateChanged(value, true),
+                                decoration: InputDecoration(
+                                  labelText: 'Start Date of Leave *',
+                                  hintText: ConstFormats.DATE_MMDDYYYY,
+                                  errorText: _startDateOfLeaveError,
+                                  border: const OutlineInputBorder(),
+                                  isDense: true,
+                                  suffixIcon: IconButton(
+                                    icon: const Icon(Icons.calendar_month),
+                                    onPressed: () => _onPickDatePressed(
+                                      ctrl: _dateStartController,
+                                      isStart: true,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+
+                              // 2. Half Day
+                              Row(
+                                children: [
+                                  Checkbox(
+                                    value: _isHalfDay,
+                                    onChanged: (v) => setState(() {
+                                      _isHalfDay = v!;
+                                      if (_isHalfDay) {
+                                        _endDate = _startDate;
+                                        _dateEndController.text =
+                                            _dateStartController.text;
+                                      }
+                                    }),
+                                  ),
+                                  const Text('Half Day'),
+                                  if (_isHalfDay) ...[
+                                    const SizedBox(width: 16),
+                                    Radio<bool>(
+                                      value: true,
+                                      groupValue: _isFirstHalf,
+                                      onChanged: (v) =>
+                                          setState(() => _isFirstHalf = v!),
+                                    ),
+                                    const Text('1st Half'),
+                                    Radio<bool>(
+                                      value: false,
+                                      groupValue: _isFirstHalf,
+                                      onChanged: (v) =>
+                                          setState(() => _isFirstHalf = v!),
+                                    ),
+                                    const Text('2nd Half'),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+
+                              // 3. End Date
+                              TextField(
+                                controller: _dateEndController,
+                                keyboardType: TextInputType.datetime,
+                                onChanged: (value) =>
+                                    _onDateChanged(value, false),
+                                decoration: InputDecoration(
+                                  labelText: 'End Date of Leave *',
+                                  hintText: ConstFormats.DATE_MMDDYYYY,
+                                  errorText: _endDateOfLeaveError,
+                                  border: const OutlineInputBorder(),
+                                  isDense: true,
+                                  suffixIcon: IconButton(
+                                    icon: const Icon(Icons.calendar_month),
+                                    onPressed: _isHalfDay
+                                        ? null
+                                        : () => _onPickDatePressed(
+                                              ctrl: _dateEndController,
+                                              isStart: false,
+                                            ),
+                                  ),
+                                ),
+                                enabled: !_isHalfDay,
+                              ),
+                              const SizedBox(height: 16),
+
+                              // 4. Total Leave Days
+                              TextFormField(
+                                readOnly: true,
+                                decoration: InputDecoration(
+                                  labelText: 'Total Leave Days',
+                                  border: const OutlineInputBorder(),
+                                  isDense: true,
+                                  hintText: _totalDays.toString(),
+                                ),
+                                controller: _totalLeaveDaysController,
+                              ),
+                              const SizedBox(height: 16),
+
+                              // 5. Reason
+                              TextFormField(
+                                decoration: InputDecoration(
+                                  labelText: 'Reason *',
+                                  errorText: _reasonOfLeaveError,
+                                  border: const OutlineInputBorder(),
+                                ),
+                                onChanged: (value) => setState(() {
+                                  _reasonOfLeaveError = null;
+                                }),
+                                maxLines: 3,
+                                controller: _reasonOfLeaveController,
+                              ),
+                              const SizedBox(height: 16),
+                              SizedBox(
+                                width: double.infinity,
+                                child: Text("Proof of Medical "),
+                              ),
+                              if (_proofImage != null)
+                                Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    // The proof box with image preview
+                                    Container(
+                                      height: 140,
+                                      width: double.infinity,
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: Colors.grey.shade400,
                                         ),
-                                      IconButton(
-                                        visualDensity: VisualDensity.compact,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(4),
+                                        child: Image.file(
+                                          _proofImage!,
+                                          // fit: BoxFit.cover,
+                                          fit: BoxFit.contain,
+                                        ),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      top: -5,
+                                      right: -5,
+                                      child: IconButton(
                                         onPressed: () {
-                                          focusNode.hasFocus
-                                              ? focusNode.unfocus()
-                                              : focusNode.requestFocus();
+                                          setState(() {
+                                            _proofImage = null;
+                                          });
                                         },
-                                        icon: Icon(
-                                          focusNode.hasFocus
-                                              ? Icons.arrow_drop_up
-                                              : Icons.arrow_drop_down,
+                                        icon: Icon(Icons.cancel),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              const SizedBox(height: 10),
+                              Material(
+                                elevation: 2,
+                                borderRadius: BorderRadius.circular(24),
+                                child: Container(
+                                  width: double.infinity,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(24),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceEvenly,
+                                    children: [
+                                      InkWell(
+                                        onTap: _onPickFromCameraPressed,
+                                        borderRadius: BorderRadius.horizontal(
+                                          left: Radius.circular(24),
+                                        ),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                          ),
+                                          child: Row(
+                                            children: const [
+                                              Icon(Icons.camera_alt, size: 18),
+                                              SizedBox(width: 6),
+                                              Text(
+                                                'Camera',
+                                                style: TextStyle(fontSize: 14),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      Container(
+                                        width: 1,
+                                        height: 24,
+                                        color: Colors.grey.shade300,
+                                      ),
+                                      InkWell(
+                                        onTap: _onPickFromGalleryPressed,
+                                        borderRadius: BorderRadius.horizontal(
+                                          right: Radius.circular(24),
+                                        ),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                          ),
+                                          child: Row(
+                                            children: const [
+                                              Icon(
+                                                Icons.insert_drive_file,
+                                                size: 18,
+                                              ),
+                                              SizedBox(width: 6),
+                                              Text(
+                                                'File',
+                                                style: TextStyle(fontSize: 14),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                onChanged: (value) {
-                                  setState(() {});
-                                },
-                              );
-                            },
-                            controller: _selectedLeaveTypeController,
-                          ),
-                          SizedBox(height: 16),
-                          TextField(
-                            controller: _dateStartController,
-                            keyboardType: TextInputType.datetime,
-                            onChanged: (value) => _onDateChanged(value, true),
-                            decoration: InputDecoration(
-                              labelText: 'Start Date of Leave *',
-                              hintText: ConstFormats.DATE_MMDDYYYY,
-                              errorText: _startDateOfLeaveError,
-                              border: const OutlineInputBorder(),
-                              isDense: true,
-                              suffixIcon: IconButton(
-                                icon: const Icon(Icons.calendar_month),
-                                onPressed: () => _onPickDatePressed(
-                                  ctrl: _dateStartController,
-                                  isStart: true,
-                                ),
                               ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // 2. Half Day
-                          Row(
-                            children: [
-                              Checkbox(
-                                value: _isHalfDay,
-                                onChanged: (v) => setState(() {
-                                  _isHalfDay = v!;
-                                  if (_isHalfDay) {
-                                    _endDate = _startDate;
-                                    _dateEndController.text =
-                                        _dateStartController.text;
-                                  }
-                                }),
-                              ),
-                              const Text('Half Day'),
-                              if (_isHalfDay) ...[
-                                const SizedBox(width: 16),
-                                Radio<bool>(
-                                  value: true,
-                                  groupValue: _isFirstHalf,
-                                  onChanged: (v) =>
-                                      setState(() => _isFirstHalf = v!),
-                                ),
-                                const Text('1st Half'),
-                                Radio<bool>(
-                                  value: false,
-                                  groupValue: _isFirstHalf,
-                                  onChanged: (v) =>
-                                      setState(() => _isFirstHalf = v!),
-                                ),
-                                const Text('2nd Half'),
-                              ],
+                              SizedBox(height: 14),
                             ],
-                          ),
-                          const SizedBox(height: 16),
-
-                          // 3. End Date
-                          TextField(
-                            controller: _dateEndController,
-                            keyboardType: TextInputType.datetime,
-                            onChanged: (value) => _onDateChanged(value, false),
-                            decoration: InputDecoration(
-                              labelText: 'End Date of Leave *',
-                              hintText: ConstFormats.DATE_MMDDYYYY,
-                              errorText: _endDateOfLeaveError,
-                              border: const OutlineInputBorder(),
-                              isDense: true,
-                              suffixIcon: IconButton(
-                                icon: const Icon(Icons.calendar_month),
-                                onPressed: _isHalfDay
-                                    ? null
-                                    : () => _onPickDatePressed(
-                                          ctrl: _dateEndController,
-                                          isStart: false,
-                                        ),
-                              ),
-                            ),
-                            enabled: !_isHalfDay,
-                          ),
-                          const SizedBox(height: 16),
-
-                          // 4. Total Leave Days
-                          TextFormField(
-                            readOnly: true,
-                            decoration: InputDecoration(
-                              labelText: 'Total Leave Days',
-                              border: const OutlineInputBorder(),
-                              isDense: true,
-                              hintText: _totalDays.toString(),
-                            ),
-                            controller: _totalLeaveDaysController,
-                          ),
-                          const SizedBox(height: 16),
-
-                          // 5. Reason
-                          TextFormField(
-                            decoration: InputDecoration(
-                              labelText: 'Reason *',
-                              errorText: _reasonOfLeaveError,
-                              border: const OutlineInputBorder(),
-                            ),
-                            onChanged: (value) => setState(() {
-                              _reasonOfLeaveError = null;
-                            }),
-                            maxLines: 3,
-                            controller: _reasonOfLeaveController,
-                          ),
-                          const SizedBox(height: 16),
-                          Text('Proof Of Medical'),
-                          if (_proofImage != null)
-                            Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                // The proof box with image preview
-                                Container(
-                                  height: 140,
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: Colors.grey.shade400,
-                                    ),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(4),
-                                    child: Image.file(
-                                      _proofImage!,
-                                      // fit: BoxFit.cover,
-                                      fit: BoxFit.contain,
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  top: -5,
-                                  right: -5,
-                                  child: IconButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _proofImage = null;
-                                      });
-                                    },
-                                    icon: Icon(Icons.cancel),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          const SizedBox(height: 10),
-                          Material(
-                            elevation: 2,
-                            borderRadius: BorderRadius.circular(24),
-                            child: Container(
-                              width: double.infinity,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(24),
-                              ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  InkWell(
-                                    onTap: _onPickFromCameraPressed,
-                                    borderRadius: BorderRadius.horizontal(
-                                      left: Radius.circular(24),
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                      ),
-                                      child: Row(
-                                        children: const [
-                                          Icon(Icons.camera_alt, size: 18),
-                                          SizedBox(width: 6),
-                                          Text(
-                                            'Camera',
-                                            style: TextStyle(fontSize: 14),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  Container(
-                                    width: 1,
-                                    height: 24,
-                                    color: Colors.grey.shade300,
-                                  ),
-                                  InkWell(
-                                    onTap: _onPickFromGalleryPressed,
-                                    borderRadius: BorderRadius.horizontal(
-                                      right: Radius.circular(24),
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                      ),
-                                      child: Row(
-                                        children: const [
-                                          Icon(
-                                            Icons.insert_drive_file,
-                                            size: 18,
-                                          ),
-                                          SizedBox(width: 6),
-                                          Text(
-                                            'File',
-                                            style: TextStyle(fontSize: 14),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          SizedBox(height: 14),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Positioned(
-            bottom: 20,
-            right: 16,
-            child: Opacity(
-              opacity: _isLeaveCreditsLoading || _isSubmitting
-                  ? 0.5
-                  : 1.0, // fade when loading
-              child: FloatingActionButton.extended(
-                onPressed: _isLeaveCreditsLoading || _isSubmitting
-                    ? null
-                    : () => _onSubmitPressed(context),
-                backgroundColor: AppColors.PRIMARY,
-                label: _isSubmitting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                          strokeWidth: 2,
+                          )),
                         ),
-                      )
-                    : const Icon(Icons.save, color: Colors.white),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+                      ),
+                    ],
+                  ),
+                  SafeArea(
+                    minimum: const EdgeInsets.only(
+                        bottom: fabBottomMargin, right: 16),
+                    child: Align(
+                        alignment: Alignment.bottomRight,
+                        child: SizedBox(
+                          child: Opacity(
+                            opacity: _isLeaveCreditsLoading || _isSubmitting
+                                ? 0.5
+                                : 1.0,
+                            child: FloatingActionButton.extended(
+                              onPressed: _isLeaveCreditsLoading || _isSubmitting
+                                  ? null
+                                  : () => _onSubmitPressed(context),
+                              backgroundColor: AppColors.PRIMARY,
+                              label: _isSubmitting
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                                Colors.white),
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.save, color: Colors.white),
+                            ),
+                          ),
+                        )),
+                  )
+                ],
+              ));
+        });
   }
 }
 
