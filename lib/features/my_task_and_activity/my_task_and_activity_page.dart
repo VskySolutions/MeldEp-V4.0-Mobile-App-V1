@@ -218,8 +218,6 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
       "activityStatusId": statusId,
     };
 
-    print(payload);
-
     try {
       final response =
           await MyTaskAndActivityService.instance.changeActivityStatus(payload);

@@ -11,6 +11,7 @@ import 'package:test_project/features/my_task_and_activity/my_task_and_activity_
 import 'package:test_project/features/profile/profile_screen.dart';
 import 'package:test_project/features/meetings/add_timesheet_lines/add_timesheet_lines_screen.dart';
 import 'package:test_project/features/meetings/meetings_screen.dart';
+import 'package:test_project/features/splash/splash_screen.dart';
 import 'package:test_project/features/time_in_time_out/time_in_time_out_screen.dart';
 import 'package:test_project/features/time_in_time_out/time_in_time_out_view_more/time_in_time_out_view_more.dart';
 import 'package:test_project/features/timesheet/add_timesheet/add_timesheet_page.dart';
@@ -27,10 +28,14 @@ class AppRouter {
   static GoRouter get router => GoRouter(
         observers: [routeObserver],
         refreshListenable: AuthService.instance,
-        initialLocation:
-            AuthService.instance.isLoggedIn ? '/main/home' : '/login',
+        initialLocation: '/splash', 
         routes: [
-          // Public login route: can remain as-is
+          GoRoute(
+            name: 'splash',
+            path: '/splash',
+            builder: (_, __) => const SplashScreen(),
+          ),
+
           GoRoute(
             name: 'login',
             path: '/login',
@@ -43,7 +48,6 @@ class AppRouter {
             builder: (_, __) => const ForgotPasswordScreen(),
           ),
 
-          // Non-tab detail routes: can remain as-is
           GoRoute(
             name: 'fillTimesheet',
             path: '/fillTimesheet/:id/:mins',
@@ -70,7 +74,13 @@ class AppRouter {
               final strDate = state.pathParameters['strDate']!;
               final endDate = state.pathParameters['endDate']!;
               final duration = state.pathParameters['duration']!;
-              return AddTimesheetLinesScreen(meetingUId: id, meetingSubject: subject, meetingStrDateTime: strDate, meetingEndDateTime: endDate, meetingDuration: duration,);
+              return AddTimesheetLinesScreen(
+                meetingUId: id,
+                meetingSubject: subject,
+                meetingStrDateTime: strDate,
+                meetingEndDateTime: endDate,
+                meetingDuration: duration,
+              );
             },
           ),
           GoRoute(
@@ -223,12 +233,22 @@ class AppRouter {
           final loggedIn = AuthService.instance.isLoggedIn;
           final currentPath = state.uri.path;
 
+          // Handle splash screen redirect logic
+          if (currentPath == '/splash') {
+            if (loggedIn) {
+              return '/main/home';
+            } else {
+              return '/login';
+            }
+          }
+
           // Define all public routes that don't require authentication
-          final publicRoutes = ['/login', '/forgotPassword'];
+          final publicRoutes = ['/login', '/forgotPassword', '/splash'];
           final isPublicRoute = publicRoutes.contains(currentPath);
 
           if (!loggedIn && !isPublicRoute) return '/login';
-          if (loggedIn && isPublicRoute) return '/main/home';
+          if (loggedIn && isPublicRoute && currentPath != '/splash')
+            return '/main/home';
           return null;
         },
       );

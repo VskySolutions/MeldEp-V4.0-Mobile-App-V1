@@ -113,13 +113,13 @@ class _StatusColors {
 _StatusColors _statusColorsFor(String statusName) {
   final s = statusName.trim().toLowerCase();
   if (s.startsWith('new')) {
-    return const _StatusColors(Color(0xFF1B75AB), Color(0xFF64B5F6));
+    return const _StatusColors(Color(0xFF1B75AB), Color.fromARGB(255, 153, 204, 245));
   }
   if (s == 'open') {
-    return const _StatusColors(Color(0xFF800080), Color(0xFFBA68C8));
+    return const _StatusColors(Color(0xFF800080), Color.fromARGB(255, 213, 162, 223));
   }
   if (s == 'completed') {
-    return const _StatusColors(Color(0xFF008000), Color(0xFF81C784));
+    return const _StatusColors(Color(0xFF008000), Color.fromARGB(255, 167, 224, 170));
   }
   // Fallback
   return _StatusColors(Colors.grey.shade400, Colors.grey.shade200);

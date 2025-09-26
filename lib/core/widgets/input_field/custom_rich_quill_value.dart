@@ -1,4 +1,3 @@
-// Replace your file with this full contents
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -134,9 +133,9 @@ class _HtmlEditorInputFieldState extends State<HtmlEditorInputField> {
     int level = 0;
     if (indentAttr != null) {
       final v = indentAttr.value;
-      if (v is int) level = v;
-      else {
-        // try parse
+      if (v is int) {
+        level = v;
+      } else {
         level = int.tryParse(v.toString()) ?? 0;
       }
     }
@@ -153,15 +152,21 @@ class _HtmlEditorInputFieldState extends State<HtmlEditorInputField> {
     if (_controller == null) return;
     final sel = _controller!.selection;
     final index = sel.baseOffset;
-    // Insert a simple visual rule; if you want a true embed you'd need to register a BlockEmbed
+    // Insert a simple visual rule
     final ruleText = '\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n';
-    _controller!.replaceText(index, 0, ruleText, TextSelection.collapsed(offset: index + ruleText.length));
+    _controller!.replaceText(
+      index,
+      0,
+      ruleText,
+      TextSelection.collapsed(offset: index + ruleText.length),
+    );
   }
 
   // Insert or edit hyperlink
   Future<void> _insertLink() async {
     if (_controller == null) return;
     final sel = _controller!.selection;
+
     // Ask for URL
     final TextEditingController urlController = TextEditingController();
     final link = await showDialog<String?>(
@@ -175,8 +180,14 @@ class _HtmlEditorInputFieldState extends State<HtmlEditorInputField> {
             keyboardType: TextInputType.url,
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.of(ctx).pop(null), child: const Text('Cancel')),
-            ElevatedButton(onPressed: () => Navigator.of(ctx).pop(urlController.text.trim()), child: const Text('Insert')),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(null),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(urlController.text.trim()),
+              child: const Text('Insert'),
+            ),
           ],
         );
       },
@@ -188,10 +199,18 @@ class _HtmlEditorInputFieldState extends State<HtmlEditorInputField> {
     if (sel.isCollapsed) {
       // If nothing selected -> insert the url text and apply link
       final index = sel.baseOffset;
-      _controller!.replaceText(index, 0, uri, TextSelection(baseOffset: index, extentOffset: index + uri.length));
+      _controller!.replaceText(
+        index,
+        0,
+        uri,
+        TextSelection(baseOffset: index, extentOffset: index + uri.length),
+      );
       _controller!.formatSelection(Attribute.fromKeyValue('link', uri));
       // move cursor after inserted link
-      _controller!.updateSelection(TextSelection.collapsed(offset: index + uri.length), ChangeSource.local);
+      _controller!.updateSelection(
+        TextSelection.collapsed(offset: index + uri.length),
+        ChangeSource.local,
+      );
     } else {
       // apply link to selected text
       _controller!.formatSelection(Attribute.fromKeyValue('link', uri));
@@ -243,7 +262,11 @@ class _HtmlEditorInputFieldState extends State<HtmlEditorInputField> {
       tooltip: tooltip,
       onPressed: onPressed,
       color: color,
-      splashRadius: 20,
+      // Make buttons denser to reduce overflow risk
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+      visualDensity: VisualDensity.compact,
+      splashRadius: 18,
     );
   }
 
@@ -260,10 +283,14 @@ class _HtmlEditorInputFieldState extends State<HtmlEditorInputField> {
 
     // alignment active detection (left/center/right/justify)
     final alignAttr = selectionAttrs[Attribute.align.key];
-    final alignedLeft = alignAttr == null || alignAttr.value == Attribute.leftAlignment.value;
-    final alignedCenter = alignAttr != null && alignAttr.value == Attribute.centerAlignment.value;
-    final alignedRight = alignAttr != null && alignAttr.value == Attribute.rightAlignment.value;
-    final alignedJustify = alignAttr != null && alignAttr.value == Attribute.justifyAlignment.value;
+    final alignedLeft =
+        alignAttr == null || alignAttr.value == Attribute.leftAlignment.value;
+    final alignedCenter =
+        alignAttr != null && alignAttr.value == Attribute.centerAlignment.value;
+    final alignedRight =
+        alignAttr != null && alignAttr.value == Attribute.rightAlignment.value;
+    final alignedJustify =
+        alignAttr != null && alignAttr.value == Attribute.justifyAlignment.value;
 
     // Common minimal buttons (show in both modes)
     final List<Widget> baseButtons = [
@@ -271,18 +298,20 @@ class _HtmlEditorInputFieldState extends State<HtmlEditorInputField> {
       PopupMenuButton<Attribute>(
         tooltip: 'Align',
         onSelected: (val) => _applyAlignment(val),
-        itemBuilder: (_) => [
-          const PopupMenuItem(value: Attribute.leftAlignment, child: Text('Left')),
-          const PopupMenuItem(value: Attribute.centerAlignment, child: Text('Center')),
-          const PopupMenuItem(value: Attribute.rightAlignment, child: Text('Right')),
-          const PopupMenuItem(value: Attribute.justifyAlignment, child: Text('Justify')),
+        itemBuilder: (_) => const [
+          PopupMenuItem(value: Attribute.leftAlignment, child: Text('Left')),
+          PopupMenuItem(value: Attribute.centerAlignment, child: Text('Center')),
+          PopupMenuItem(value: Attribute.rightAlignment, child: Text('Right')),
+          PopupMenuItem(value: Attribute.justifyAlignment, child: Text('Justify')),
         ],
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Icon(
             Icons.format_align_left,
             size: 20,
-            color: (alignedCenter || alignedRight || alignedJustify) ? null : Theme.of(context).colorScheme.primary,
+            color: (alignedCenter || alignedRight || alignedJustify)
+                ? null
+                : Theme.of(context).colorScheme.primary,
           ),
         ),
       ),
@@ -331,8 +360,11 @@ class _HtmlEditorInputFieldState extends State<HtmlEditorInputField> {
     ];
 
     if (widget.showLessOptions) {
-      // Return minimal toolbar row
-      return Row(children: baseButtons);
+      // FIX: make minimal toolbar scrollable horizontally to avoid Row overflow
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(children: baseButtons),
+      );
     }
 
     // Full toolbar additions
@@ -342,14 +374,20 @@ class _HtmlEditorInputFieldState extends State<HtmlEditorInputField> {
         icon: const Icon(Icons.horizontal_rule),
         tooltip: 'Insert horizontal rule',
         onPressed: _insertHorizontalRule,
-        splashRadius: 20,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+        visualDensity: VisualDensity.compact,
+        splashRadius: 18,
       ),
       // Hyperlink
       IconButton(
         icon: const Icon(Icons.link),
         tooltip: 'Insert link',
         onPressed: _insertLink,
-        splashRadius: 20,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+        visualDensity: VisualDensity.compact,
+        splashRadius: 18,
       ),
       // Inline code / formatting toggle
       _buildToggleButton(
@@ -363,7 +401,10 @@ class _HtmlEditorInputFieldState extends State<HtmlEditorInputField> {
         icon: const Icon(Icons.format_clear),
         tooltip: 'Remove formatting',
         onPressed: _removeFormatting,
-        splashRadius: 20,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+        visualDensity: VisualDensity.compact,
+        splashRadius: 18,
       ),
       // Quote
       _buildToggleButton(
@@ -377,35 +418,50 @@ class _HtmlEditorInputFieldState extends State<HtmlEditorInputField> {
         icon: const Icon(Icons.format_indent_decrease),
         tooltip: 'Decrease indent',
         onPressed: () => _changeIndent(false),
-        splashRadius: 20,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+        visualDensity: VisualDensity.compact,
+        splashRadius: 18,
       ),
       // Increase indent
       IconButton(
         icon: const Icon(Icons.format_indent_increase),
         tooltip: 'Increase indent',
         onPressed: () => _changeIndent(true),
-        splashRadius: 20,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+        visualDensity: VisualDensity.compact,
+        splashRadius: 18,
       ),
       // Undo
       IconButton(
         icon: const Icon(Icons.undo),
         tooltip: 'Undo',
         onPressed: () => _controller?.undo(),
-        splashRadius: 20,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+        visualDensity: VisualDensity.compact,
+        splashRadius: 18,
       ),
       // Redo
       IconButton(
         icon: const Icon(Icons.redo),
         tooltip: 'Redo',
         onPressed: () => _controller?.redo(),
-        splashRadius: 20,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+        visualDensity: VisualDensity.compact,
+        splashRadius: 18,
       ),
       // View source (raw HTML)
       IconButton(
         icon: Icon(_showSource ? Icons.visibility_off : Icons.visibility),
         tooltip: _showSource ? 'Hide source' : 'View HTML source',
         onPressed: () => setState(() => _showSource = !_showSource),
-        splashRadius: 20,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+        visualDensity: VisualDensity.compact,
+        splashRadius: 18,
       ),
     ];
 
@@ -450,9 +506,6 @@ class _HtmlEditorInputFieldState extends State<HtmlEditorInputField> {
                     expands: true,
                     decoration: const InputDecoration(border: OutlineInputBorder()),
                     onChanged: (val) {
-                      // If user edits HTML source, try convert back to delta after a short validation step.
-                      // For simplicity we call _initControllerFromHtml directly (may throw if invalid HTML).
-                      // In production you might want to validate or disable editing here.
                       _initControllerFromHtml(val);
                     },
                   ),

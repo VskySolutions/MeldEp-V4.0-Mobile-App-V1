@@ -69,7 +69,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
       if (status >= 200 && status < 300) {
         showCustomSnackBar(context, message: msg, durationSeconds: 3);
-        // Consider navigating back or to a success screen
+        _emailController.text = '';
       } else {
         showCustomSnackBar(context,
             message: msg, backgroundColor: AppColors.ERROR);
@@ -190,8 +190,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     // Submit row (left label + circular button on right)
 
                     SizedBox(
-                      width: double
-                          .infinity, 
+                      width: double.infinity,
                       child: _SubmitButton(
                         isLoading: _isLoading,
                         onPressed: _onSubmitPressed,
