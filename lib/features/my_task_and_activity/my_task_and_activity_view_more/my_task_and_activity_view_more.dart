@@ -122,6 +122,7 @@ class _ProjectActivityDetailsScreenState extends State<ProjectActivityDetailsScr
             color: AppColors.PRIMARY,
           ),
         ),
+        SizedBox(height: 18,),
         InfoRow(
           label: 'Project Name',
           value: details?.projectName ?? '-',
@@ -137,6 +138,7 @@ class _ProjectActivityDetailsScreenState extends State<ProjectActivityDetailsScr
         InfoRow(
           label: 'Activity Name',
           value: details?.name ?? '-',
+          valueDetails: details?.activityNameDescription
         ),
         InfoRow(
           label: 'Estimate Hrs',
@@ -162,12 +164,12 @@ class _ProjectActivityDetailsScreenState extends State<ProjectActivityDetailsScr
           value: details?.updatedByUser.person.fullName ?? '-',
         ),
         InfoRow(
-          label: 'Start Date',
-          value: details?.task.startDate ?? '-',
+          label: 'Created Date',
+          value: details?.createdOnUtc ?? '-',
         ),
         InfoRow(
-          label: 'End Date',
-          value: details?.task.endDate ?? '-',
+          label: 'Updated Date',
+          value: details?.updatedOnUtc ?? '-',
         ),
       ],
     );
@@ -184,7 +186,7 @@ class _ProjectActivityDetailsScreenState extends State<ProjectActivityDetailsScr
             'Activity Details:',
             style: TextStyle(
               fontWeight: FontWeight.w500,
-              color: Colors.grey,
+              color: AppColors.PRIMARY,
             ),
           ),
         ),

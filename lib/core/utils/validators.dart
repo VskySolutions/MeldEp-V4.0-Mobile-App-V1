@@ -133,4 +133,38 @@ class Validators {
       return "Enter valid date ($format)";
     }
   }
+
+  /// Validate ICS URL
+  static String? validateMicrosoftIcsUrl(String? value) {
+    // Empty check
+    final raw = value?.trim() ?? '';
+    if (raw.isEmpty) return 'ICS URL is required';
+
+    // Accept https or webcal
+    final normalized =
+        raw.replaceFirst(RegExp(r'^webcal:', caseSensitive: false), 'https:');
+
+    // Parse URL
+    final uri = Uri.tryParse(normalized);
+    if (uri == null || !uri.hasAuthority || !uri.hasScheme) {
+      return 'Enter a valid Microsoft ICS URL';
+    }
+
+    // Scheme check
+    final schemeOk = uri.scheme.toLowerCase() == 'https' ||
+        uri.scheme.toLowerCase() == 'webcal';
+    if (!schemeOk) return 'Enter a valid Microsoft ICS URL';
+
+    // Host must be a Microsoft Outlook host
+    final host = uri.host.toLowerCase();
+    final hostOk = host == 'outlook.live.com' || host == 'outlook.office.com';
+    if (!hostOk) return 'Enter a valid Microsoft ICS URL';
+
+    // Must end with .ics
+    final path = uri.path.toLowerCase();
+    if (!path.endsWith('.ics')) return 'Enter a valid Microsoft ICS URL';
+
+    // All good
+    return null;
+  }
 }

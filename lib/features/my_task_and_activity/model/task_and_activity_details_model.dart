@@ -1,10 +1,43 @@
-class ProjectActivityDetailsModel {
-  final String id;
+import 'dart:convert';
+
+class TaskAndActivityDetailsModel {
+  final bool editing;
+  final List<ProjectActivityListItem> data;
+  final int total;
+  final Map<String, dynamic> customProperties;
+
+  TaskAndActivityDetailsModel({
+    required this.editing,
+    required this.data,
+    required this.total,
+    required this.customProperties,
+  });
+
+  factory TaskAndActivityDetailsModel.fromJson(Map<String, dynamic> json) {
+    return TaskAndActivityDetailsModel(
+      editing: json['editing'] ?? false,
+      data: (json['data'] as List<dynamic>?)
+              ?.map((e) => ProjectActivityListItem.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      total: json['total'] ?? 0,
+      customProperties:
+          Map<String, dynamic>.from(json['customProperties'] ?? const {}),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'editing': editing,
+        'data': data.map((e) => e.toJson()).toList(),
+        'total': total,
+        'customProperties': customProperties,
+      };
+}
+
+class ProjectActivityListItem {
   final String siteId;
   final String projectId;
-  final String taskId;
   final String projectModuleId;
-  final String activityStatusId;
   final String name;
   final String projectName;
   final String projectModuleName;
@@ -17,32 +50,28 @@ class ProjectActivityDetailsModel {
   final int sortOrder;
   final String activityNameDescription;
   final int activitiesCount;
+
   final AssignedTo assignedTo;
   final Project project;
   final Task task;
   final ProjectModule projectModule;
   final ActivityStatus activityStatus;
-  final CreatedByUser createdByUser;
-  final UpdatedByUser updatedByUser;
 
-  // New fields from response
   final String createdOnUtc;
-  final String updatedOnUtc;
   final List<dynamic> projectActivities;
   final List<dynamic> projectActivityLines;
   final List<dynamic> projectEmployeeMappings;
   final List<dynamic> projectTaskActivityFilesList;
   final List<dynamic> projectTasks;
   final List<dynamic> storyBoards;
+
+  final String id;
   final Map<String, dynamic> customProperties;
 
-  ProjectActivityDetailsModel({
-    required this.id,
+  ProjectActivityListItem({
     required this.siteId,
     required this.projectId,
-    required this.taskId,
     required this.projectModuleId,
-    required this.activityStatusId,
     required this.name,
     required this.projectName,
     required this.projectModuleName,
@@ -60,27 +89,22 @@ class ProjectActivityDetailsModel {
     required this.task,
     required this.projectModule,
     required this.activityStatus,
-    required this.createdByUser,
-    required this.updatedByUser,
     required this.createdOnUtc,
-    required this.updatedOnUtc,
     required this.projectActivities,
     required this.projectActivityLines,
     required this.projectEmployeeMappings,
     required this.projectTaskActivityFilesList,
     required this.projectTasks,
     required this.storyBoards,
+    required this.id,
     required this.customProperties,
   });
 
-  factory ProjectActivityDetailsModel.fromJson(Map<String, dynamic> json) {
-    return ProjectActivityDetailsModel(
-      id: json['id'] ?? '',
+  factory ProjectActivityListItem.fromJson(Map<String, dynamic> json) {
+    return ProjectActivityListItem(
       siteId: json['siteId'] ?? '',
       projectId: json['projectId'] ?? '',
-      taskId: json['taskId'] ?? '',
       projectModuleId: json['projectModuleId'] ?? '',
-      activityStatusId: json['activityStatusId'] ?? '',
       name: json['name'] ?? '',
       projectName: json['projectName'] ?? '',
       projectModuleName: json['projectModuleName'] ?? '',
@@ -98,25 +122,57 @@ class ProjectActivityDetailsModel {
       task: Task.fromJson(json['task'] ?? const {}),
       projectModule: ProjectModule.fromJson(json['projectModule'] ?? const {}),
       activityStatus: ActivityStatus.fromJson(json['activityStatus'] ?? const {}),
-      createdByUser: CreatedByUser.fromJson(json['createdByUser'] ?? const {}),
-      updatedByUser: UpdatedByUser.fromJson(json['updatedByUser'] ?? const {}),
       createdOnUtc: json['createdOnUtc'] ?? '',
-      updatedOnUtc: json['updatedOnUtc'] ?? '',
       projectActivities:
-          List<dynamic>.from((json['projectActivities'] ?? const [])),
+          List<dynamic>.from(json['projectActivities'] ?? const []),
       projectActivityLines:
-          List<dynamic>.from((json['projectActivityLines'] ?? const [])),
+          List<dynamic>.from(json['projectActivityLines'] ?? const []),
       projectEmployeeMappings:
-          List<dynamic>.from((json['projectEmployeeMappings'] ?? const [])),
+          List<dynamic>.from(json['projectEmployeeMappings'] ?? const []),
       projectTaskActivityFilesList: List<dynamic>.from(
-          (json['projectTaskActivityFilesList'] ?? const [])),
-      projectTasks: List<dynamic>.from((json['projectTasks'] ?? const [])),
-      storyBoards: List<dynamic>.from((json['storyBoards'] ?? const [])),
+          json['projectTaskActivityFilesList'] ?? const []),
+      projectTasks: List<dynamic>.from(json['projectTasks'] ?? const []),
+      storyBoards: List<dynamic>.from(json['storyBoards'] ?? const []),
+      id: json['id'] ?? '',
       customProperties:
           Map<String, dynamic>.from(json['customProperties'] ?? const {}),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'siteId': siteId,
+        'projectId': projectId,
+        'projectModuleId': projectModuleId,
+        'name': name,
+        'projectName': projectName,
+        'projectModuleName': projectModuleName,
+        'taskName': taskName,
+        'description': description,
+        'assignedToId': assignedToId,
+        'estimateHours': estimateHours,
+        'active': active,
+        'deleted': deleted,
+        'sortOrder': sortOrder,
+        'activityNameDescription': activityNameDescription,
+        'activitiesCount': activitiesCount,
+        'assignedTo': assignedTo.toJson(),
+        'project': project.toJson(),
+        'task': task.toJson(),
+        'projectModule': projectModule.toJson(),
+        'activityStatus': activityStatus.toJson(),
+        'createdOnUtc': createdOnUtc,
+        'projectActivities': projectActivities,
+        'projectActivityLines': projectActivityLines,
+        'projectEmployeeMappings': projectEmployeeMappings,
+        'projectTaskActivityFilesList': projectTaskActivityFilesList,
+        'projectTasks': projectTasks,
+        'storyBoards': storyBoards,
+        'id': id,
+        'customProperties': customProperties,
+      };
 }
+
+// ------------------ Nested / Reusable Models ------------------
 
 class AssignedTo {
   final bool active;
@@ -124,7 +180,6 @@ class AssignedTo {
   final Person person;
   final String id;
 
-  // New collections and customProperties
   final List<dynamic> employeeTypeModel;
   final List<dynamic> employeeStatusModel;
   final List<dynamic> employeeDepartmentModel;
@@ -168,48 +223,69 @@ class AssignedTo {
       person: Person.fromJson(json['person'] ?? const {}),
       id: json['id'] ?? '',
       employeeTypeModel:
-          List<dynamic>.from((json['employeeTypeModel'] ?? const [])),
+          List<dynamic>.from(json['employeeTypeModel'] ?? const []),
       employeeStatusModel:
-          List<dynamic>.from((json['employeeStatusModel'] ?? const [])),
+          List<dynamic>.from(json['employeeStatusModel'] ?? const []),
       employeeDepartmentModel:
-          List<dynamic>.from((json['employeeDepartmentModel'] ?? const [])),
+          List<dynamic>.from(json['employeeDepartmentModel'] ?? const []),
       employeeDesignationModel:
-          List<dynamic>.from((json['employeeDesignationModel'] ?? const [])),
+          List<dynamic>.from(json['employeeDesignationModel'] ?? const []),
       employeeOrgLocationModel:
-          List<dynamic>.from((json['employeeOrgLocationModel'] ?? const [])),
+          List<dynamic>.from(json['employeeOrgLocationModel'] ?? const []),
       employeeClientLocationModel:
-          List<dynamic>.from((json['employeeClientLocationModel'] ?? const [])),
+          List<dynamic>.from(json['employeeClientLocationModel'] ?? const []),
       employeeDepartment:
-          List<dynamic>.from((json['employeeDepartment'] ?? const [])),
+          List<dynamic>.from(json['employeeDepartment'] ?? const []),
       employeeDesignation:
-          List<dynamic>.from((json['employeeDesignation'] ?? const [])),
+          List<dynamic>.from(json['employeeDesignation'] ?? const []),
       employeeStatuses:
-          List<dynamic>.from((json['employeeStatuses'] ?? const [])),
-      employeeType: List<dynamic>.from((json['employeeType'] ?? const [])),
+          List<dynamic>.from(json['employeeStatuses'] ?? const []),
+      employeeType: List<dynamic>.from(json['employeeType'] ?? const []),
       employeeOrgLocation:
-          List<dynamic>.from((json['employeeOrgLocation'] ?? const [])),
+          List<dynamic>.from(json['employeeOrgLocation'] ?? const []),
       employeeClientLocation:
-          List<dynamic>.from((json['employeeClientLocation'] ?? const [])),
+          List<dynamic>.from(json['employeeClientLocation'] ?? const []),
       employeeAssignedHours:
-          List<dynamic>.from((json['employeeAssignedHours'] ?? const [])),
+          List<dynamic>.from(json['employeeAssignedHours'] ?? const []),
       customProperties:
           Map<String, dynamic>.from(json['customProperties'] ?? const {}),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'active': active,
+        'estimateHrs': estimateHrs,
+        'person': person.toJson(),
+        'id': id,
+        'employeeTypeModel': employeeTypeModel,
+        'employeeStatusModel': employeeStatusModel,
+        'employeeDepartmentModel': employeeDepartmentModel,
+        'employeeDesignationModel': employeeDesignationModel,
+        'employeeOrgLocationModel': employeeOrgLocationModel,
+        'employeeClientLocationModel': employeeClientLocationModel,
+        'employeeDepartment': employeeDepartment,
+        'employeeDesignation': employeeDesignation,
+        'employeeStatuses': employeeStatuses,
+        'employeeType': employeeType,
+        'employeeOrgLocation': employeeOrgLocation,
+        'employeeClientLocation': employeeClientLocation,
+        'employeeAssignedHours': employeeAssignedHours,
+        'customProperties': customProperties,
+      };
 }
 
 class Person {
   final String firstName;
   final String lastName;
+  final String fullName;
   final bool isCustomer;
   final bool personSiteFlag;
-
-  // New
   final Map<String, dynamic> customProperties;
 
   Person({
     required this.firstName,
     required this.lastName,
+    required this.fullName,
     required this.isCustomer,
     required this.personSiteFlag,
     required this.customProperties,
@@ -219,12 +295,22 @@ class Person {
     return Person(
       firstName: json['firstName'] ?? '',
       lastName: json['lastName'] ?? '',
+      fullName: json['fullName'] ?? '',
       isCustomer: json['isCustomer'] ?? false,
       personSiteFlag: json['personSiteFlag'] ?? false,
       customProperties:
           Map<String, dynamic>.from(json['customProperties'] ?? const {}),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'firstName': firstName,
+        'lastName': lastName,
+        'fullName': fullName,
+        'isCustomer': isCustomer,
+        'personSiteFlag': personSiteFlag,
+        'customProperties': customProperties,
+      };
 }
 
 class Project {
@@ -233,7 +319,6 @@ class Project {
   final bool active;
   final String id;
 
-  // New fields
   final bool editing;
   final int projectNotesCount;
   final int completedTaskCount;
@@ -254,7 +339,8 @@ class Project {
   final bool deleted;
   final bool isCharter;
 
-  // Collections
+  final Status? projectStatus;
+
   final List<dynamic> projectActivities;
   final List<dynamic> projectEmployeeMappings;
   final List<dynamic> projectFileList;
@@ -271,7 +357,6 @@ class Project {
   final List<dynamic> projectWeeklyPlans;
   final List<dynamic> weeklyPlan;
   final List<dynamic> monthlyPlan;
-
   final Map<String, dynamic> customProperties;
 
   Project({
@@ -298,6 +383,7 @@ class Project {
     required this.createdOnUtc,
     required this.deleted,
     required this.isCharter,
+    required this.projectStatus,
     required this.projectActivities,
     required this.projectEmployeeMappings,
     required this.projectFileList,
@@ -342,48 +428,87 @@ class Project {
       createdOnUtc: json['createdOnUtc'] ?? '',
       deleted: json['deleted'] ?? false,
       isCharter: json['isCharter'] ?? false,
+      projectStatus:
+          json['projectStatus'] != null ? Status.fromJson(json['projectStatus']) : null,
       projectActivities:
-          List<dynamic>.from((json['projectActivities'] ?? const [])),
+          List<dynamic>.from(json['projectActivities'] ?? const []),
       projectEmployeeMappings:
-          List<dynamic>.from((json['projectEmployeeMappings'] ?? const [])),
-      projectFileList:
-          List<dynamic>.from((json['projectFileList'] ?? const [])),
-      projectTasks: List<dynamic>.from((json['projectTasks'] ?? const [])),
-      storyBoards: List<dynamic>.from((json['storyBoards'] ?? const [])),
-      projectModules: List<dynamic>.from((json['projectModules'] ?? const [])),
+          List<dynamic>.from(json['projectEmployeeMappings'] ?? const []),
+      projectFileList: List<dynamic>.from(json['projectFileList'] ?? const []),
+      projectTasks: List<dynamic>.from(json['projectTasks'] ?? const []),
+      storyBoards: List<dynamic>.from(json['storyBoards'] ?? const []),
+      projectModules: List<dynamic>.from(json['projectModules'] ?? const []),
       projectsMessages:
-          List<dynamic>.from((json['projectsMessages'] ?? const [])),
+          List<dynamic>.from(json['projectsMessages'] ?? const []),
       projectUserMappings:
-          List<dynamic>.from((json['projectUserMappings'] ?? const [])),
-      projectTags: List<dynamic>.from((json['projectTags'] ?? const [])),
-      issue: List<dynamic>.from((json['issue'] ?? const [])),
-      requirement: List<dynamic>.from((json['requirement'] ?? const [])),
-      testPlans: List<dynamic>.from((json['testPlans'] ?? const [])),
-      timesheetLine: List<dynamic>.from((json['timesheetLine'] ?? const [])),
+          List<dynamic>.from(json['projectUserMappings'] ?? const []),
+      projectTags: List<dynamic>.from(json['projectTags'] ?? const []),
+      issue: List<dynamic>.from(json['issue'] ?? const []),
+      requirement: List<dynamic>.from(json['requirement'] ?? const []),
+      testPlans: List<dynamic>.from(json['testPlans'] ?? const []),
+      timesheetLine: List<dynamic>.from(json['timesheetLine'] ?? const []),
       projectWeeklyPlans:
-          List<dynamic>.from((json['projectWeeklyPlans'] ?? const [])),
-      weeklyPlan: List<dynamic>.from((json['weeklyPlan'] ?? const [])),
-      monthlyPlan: List<dynamic>.from((json['monthlyPlan'] ?? const [])),
+          List<dynamic>.from(json['projectWeeklyPlans'] ?? const []),
+      weeklyPlan: List<dynamic>.from(json['weeklyPlan'] ?? const []),
+      monthlyPlan: List<dynamic>.from(json['monthlyPlan'] ?? const []),
       customProperties:
           Map<String, dynamic>.from(json['customProperties'] ?? const {}),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'year': year,
+        'name': name,
+        'active': active,
+        'id': id,
+        'editing': editing,
+        'projectNotesCount': projectNotesCount,
+        'completedTaskCount': completedTaskCount,
+        'totalTaskCount': totalTaskCount,
+        'projectSwimlaneCount': projectSwimlaneCount,
+        'completedIssueCount': completedIssueCount,
+        'totalIssueCount': totalIssueCount,
+        'completedRequirementCount': completedRequirementCount,
+        'totalRequirementCount': totalRequirementCount,
+        'totalTaskEstimateHours': totalTaskEstimateHours,
+        'totalActivityHours': totalActivityHours,
+        'totalModuleCount': totalModuleCount,
+        'totalTasksCount': totalTasksCount,
+        'isTemplate': isTemplate,
+        'isPinned': isPinned,
+        'sortOrder': sortOrder,
+        'createdOnUtc': createdOnUtc,
+        'deleted': deleted,
+        'isCharter': isCharter,
+        'projectStatus': projectStatus?.toJson(),
+        'projectActivities': projectActivities,
+        'projectEmployeeMappings': projectEmployeeMappings,
+        'projectFileList': projectFileList,
+        'projectTasks': projectTasks,
+        'storyBoards': storyBoards,
+        'projectModules': projectModules,
+        'projectsMessages': projectsMessages,
+        'projectUserMappings': projectUserMappings,
+        'projectTags': projectTags,
+        'issue': issue,
+        'requirement': requirement,
+        'testPlans': testPlans,
+        'timesheetLine': timesheetLine,
+        'projectWeeklyPlans': projectWeeklyPlans,
+        'weeklyPlan': weeklyPlan,
+        'monthlyPlan': monthlyPlan,
+        'customProperties': customProperties,
+      };
 }
 
 class Task {
   final String projectId;
-  final String name;
-  final String description;
-  final double estimateTime;
-  final String startDate;
-  final String endDate;
-  final String id;
-  final Status status;
-
-  // New fields
   final int projectTaskNumber;
   final String projectModuleId;
+  final String name;
+  final String description;
   final String priorityId;
+  final double estimateTime;
   final bool active;
   final bool isMoved;
   final bool isIssueConverted;
@@ -393,10 +518,12 @@ class Task {
   final bool isDuplicate;
   final int projectNotesCount;
   final int projectTaskNotesCount;
+  final String startDate;
+  final String endDate;
   final String createdOnUtc;
   final int totalTimesheetEstHours;
+  final Status status;
 
-  // Collections
   final List<dynamic> projectActivityModel;
   final List<dynamic> projectActivities;
   final List<dynamic> projectTaskStatusLog;
@@ -404,21 +531,17 @@ class Task {
   final List<dynamic> projectTaskTags;
   final List<dynamic> projectTaskRelatedMappings;
   final List<dynamic> projectWeeklyPlanDatesReqTaskIssueMappingList;
-
+  final String id;
   final Map<String, dynamic> customProperties;
 
   Task({
     required this.projectId,
-    required this.name,
-    required this.description,
-    required this.estimateTime,
-    required this.startDate,
-    required this.endDate,
-    required this.id,
-    required this.status,
     required this.projectTaskNumber,
     required this.projectModuleId,
+    required this.name,
+    required this.description,
     required this.priorityId,
+    required this.estimateTime,
     required this.active,
     required this.isMoved,
     required this.isIssueConverted,
@@ -428,8 +551,11 @@ class Task {
     required this.isDuplicate,
     required this.projectNotesCount,
     required this.projectTaskNotesCount,
+    required this.startDate,
+    required this.endDate,
     required this.createdOnUtc,
     required this.totalTimesheetEstHours,
+    required this.status,
     required this.projectActivityModel,
     required this.projectActivities,
     required this.projectTaskStatusLog,
@@ -437,6 +563,7 @@ class Task {
     required this.projectTaskTags,
     required this.projectTaskRelatedMappings,
     required this.projectWeeklyPlanDatesReqTaskIssueMappingList,
+    required this.id,
     required this.customProperties,
   });
 
@@ -464,30 +591,61 @@ class Task {
       totalTimesheetEstHours: json['totalTimesheetEstHours'] ?? 0,
       status: Status.fromJson(json['status'] ?? const {}),
       projectActivityModel:
-          List<dynamic>.from((json['projectActivityModel'] ?? const [])),
+          List<dynamic>.from(json['projectActivityModel'] ?? const []),
       projectActivities:
-          List<dynamic>.from((json['projectActivities'] ?? const [])),
+          List<dynamic>.from(json['projectActivities'] ?? const []),
       projectTaskStatusLog:
-          List<dynamic>.from((json['projectTaskStatusLog'] ?? const [])),
+          List<dynamic>.from(json['projectTaskStatusLog'] ?? const []),
       projectTaskFilesList:
-          List<dynamic>.from((json['projectTaskFilesList'] ?? const [])),
+          List<dynamic>.from(json['projectTaskFilesList'] ?? const []),
       projectTaskTags:
-          List<dynamic>.from((json['projectTask_Tags'] ?? const [])),
+          List<dynamic>.from(json['projectTask_Tags'] ?? const []),
       projectTaskRelatedMappings: List<dynamic>.from(
-          (json['projectTaskRelatedMappings'] ?? const [])),
+          json['projectTaskRelatedMappings'] ?? const []),
       projectWeeklyPlanDatesReqTaskIssueMappingList: List<dynamic>.from(
-          (json['projectWeeklyPlanDatesReqTaskIssueMappingList'] ?? const [])),
+          json['projectWeeklyPlanDatesReqTaskIssueMappingList'] ?? const []),
       id: json['id'] ?? '',
       customProperties:
           Map<String, dynamic>.from(json['customProperties'] ?? const {}),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'projectId': projectId,
+        'projectTaskNumber': projectTaskNumber,
+        'projectModuleId': projectModuleId,
+        'name': name,
+        'description': description,
+        'priorityId': priorityId,
+        'estimateTime': estimateTime,
+        'active': active,
+        'isMoved': isMoved,
+        'isIssueConverted': isIssueConverted,
+        'isRequirementConverted': isRequirementConverted,
+        'sortOrder': sortOrder,
+        'activitiesCount': activitiesCount,
+        'isDuplicate': isDuplicate,
+        'projectNotesCount': projectNotesCount,
+        'projectTaskNotesCount': projectTaskNotesCount,
+        'startDate': startDate,
+        'endDate': endDate,
+        'createdOnUtc': createdOnUtc,
+        'totalTimesheetEstHours': totalTimesheetEstHours,
+        'status': status.toJson(),
+        'projectActivityModel': projectActivityModel,
+        'projectActivities': projectActivities,
+        'projectTaskStatusLog': projectTaskStatusLog,
+        'projectTaskFilesList': projectTaskFilesList,
+        'projectTask_Tags': projectTaskTags,
+        'projectTaskRelatedMappings': projectTaskRelatedMappings,
+        'projectWeeklyPlanDatesReqTaskIssueMappingList': projectWeeklyPlanDatesReqTaskIssueMappingList,
+        'id': id,
+        'customProperties': customProperties,
+      };
 }
 
 class Status {
   final String dropDownValue;
-
-  // New fields
   final int sortOrder;
   final bool active;
   final String id;
@@ -511,13 +669,18 @@ class Status {
           Map<String, dynamic>.from(json['customProperties'] ?? const {}),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'dropDownValue': dropDownValue,
+        'sortOrder': sortOrder,
+        'active': active,
+        'id': id,
+        'customProperties': customProperties,
+      };
 }
 
 class ProjectModule {
   final String name;
-  final String id;
-
-  // New fields
   final int projectModuleNumber;
   final bool active;
   final int sortOrder;
@@ -528,19 +691,16 @@ class ProjectModule {
   final int projectModuleNotesCount;
   final bool isIssueConverted;
   final bool isRequirementConverted;
-
-  // Collections
   final List<dynamic> projectActivities;
   final List<dynamic> projectTasks;
   final List<dynamic> projectModuleDocumentModel;
   final List<dynamic> projectTaskModel;
   final List<dynamic> projectModuleFilesList;
-
+  final String id;
   final Map<String, dynamic> customProperties;
 
   ProjectModule({
     required this.name,
-    required this.id,
     required this.projectModuleNumber,
     required this.active,
     required this.sortOrder,
@@ -556,13 +716,13 @@ class ProjectModule {
     required this.projectModuleDocumentModel,
     required this.projectTaskModel,
     required this.projectModuleFilesList,
+    required this.id,
     required this.customProperties,
   });
 
   factory ProjectModule.fromJson(Map<String, dynamic> json) {
     return ProjectModule(
       name: json['name'] ?? '',
-      id: json['id'] ?? '',
       projectModuleNumber: json['projectModuleNumber'] ?? 0,
       active: json['active'] ?? false,
       sortOrder: json['sortOrder'] ?? 0,
@@ -574,24 +734,43 @@ class ProjectModule {
       isIssueConverted: json['isIssueConverted'] ?? false,
       isRequirementConverted: json['isRequirementConverted'] ?? false,
       projectActivities:
-        List<dynamic>.from((json['projectActivities'] ?? const [])),
-      projectTasks: List<dynamic>.from((json['projectTasks'] ?? const [])),
+          List<dynamic>.from(json['projectActivities'] ?? const []),
+      projectTasks: List<dynamic>.from(json['projectTasks'] ?? const []),
       projectModuleDocumentModel:
-        List<dynamic>.from((json['projectModuleDocumentModel'] ?? const [])),
-      projectTaskModel:
-        List<dynamic>.from((json['projectTaskModel'] ?? const [])),
+          List<dynamic>.from(json['projectModuleDocumentModel'] ?? const []),
+      projectTaskModel: List<dynamic>.from(json['projectTaskModel'] ?? const []),
       projectModuleFilesList:
-        List<dynamic>.from((json['projectModuleFilesList'] ?? const [])),
+          List<dynamic>.from(json['projectModuleFilesList'] ?? const []),
+      id: json['id'] ?? '',
       customProperties:
-        Map<String, dynamic>.from(json['customProperties'] ?? const {}),
+          Map<String, dynamic>.from(json['customProperties'] ?? const {}),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'projectModuleNumber': projectModuleNumber,
+        'active': active,
+        'sortOrder': sortOrder,
+        'isDuplicate': isDuplicate,
+        'isMoved': isMoved,
+        'projectTasksCount': projectTasksCount,
+        'createdOnUtc': createdOnUtc,
+        'projectModuleNotesCount': projectModuleNotesCount,
+        'isIssueConverted': isIssueConverted,
+        'isRequirementConverted': isRequirementConverted,
+        'projectActivities': projectActivities,
+        'projectTasks': projectTasks,
+        'projectModuleDocumentModel': projectModuleDocumentModel,
+        'projectTaskModel': projectTaskModel,
+        'projectModuleFilesList': projectModuleFilesList,
+        'id': id,
+        'customProperties': customProperties,
+      };
 }
 
 class ActivityStatus {
   final String dropDownValue;
-
-  // New fields
   final int sortOrder;
   final bool active;
   final String id;
@@ -615,6 +794,14 @@ class ActivityStatus {
           Map<String, dynamic>.from(json['customProperties'] ?? const {}),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'dropDownValue': dropDownValue,
+        'sortOrder': sortOrder,
+        'active': active,
+        'id': id,
+        'customProperties': customProperties,
+      };
 }
 
 class CreatedByUser {
@@ -622,8 +809,6 @@ class CreatedByUser {
   final bool deleted;
   final PersonWithFullName person;
   final String id;
-
-  // New fields
   final bool emailConfirmed;
   final String securityStamp;
   final String concurrencyStamp;
@@ -661,6 +846,20 @@ class CreatedByUser {
       accessFailedCount: json['accessFailedCount'] ?? 0,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'active': active,
+        'deleted': deleted,
+        'person': person.toJson(),
+        'id': id,
+        'emailConfirmed': emailConfirmed,
+        'securityStamp': securityStamp,
+        'concurrencyStamp': concurrencyStamp,
+        'phoneNumberConfirmed': phoneNumberConfirmed,
+        'twoFactorEnabled': twoFactorEnabled,
+        'lockoutEnabled': lockoutEnabled,
+        'accessFailedCount': accessFailedCount,
+      };
 }
 
 class UpdatedByUser {
@@ -668,8 +867,6 @@ class UpdatedByUser {
   final bool deleted;
   final PersonWithFullName person;
   final String id;
-
-  // New fields
   final bool emailConfirmed;
   final String securityStamp;
   final String concurrencyStamp;
@@ -707,14 +904,26 @@ class UpdatedByUser {
       accessFailedCount: json['accessFailedCount'] ?? 0,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'active': active,
+        'deleted': deleted,
+        'person': person.toJson(),
+        'id': id,
+        'emailConfirmed': emailConfirmed,
+        'securityStamp': securityStamp,
+        'concurrencyStamp': concurrencyStamp,
+        'phoneNumberConfirmed': phoneNumberConfirmed,
+        'twoFactorEnabled': twoFactorEnabled,
+        'lockoutEnabled': lockoutEnabled,
+        'accessFailedCount': accessFailedCount,
+      };
 }
 
 class PersonWithFullName {
   final bool deleted;
   final bool isCustomer;
   final String fullName;
-
-  // New
   final List<dynamic> personSitesMapping;
 
   PersonWithFullName({
@@ -730,7 +939,23 @@ class PersonWithFullName {
       isCustomer: json['isCustomer'] ?? false,
       fullName: json['fullName'] ?? '',
       personSitesMapping:
-          List<dynamic>.from((json['personSitesMapping'] ?? const [])),
+          List<dynamic>.from(json['personSitesMapping'] ?? const []),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'deleted': deleted,
+        'isCustomer': isCustomer,
+        'fullName': fullName,
+        'personSitesMapping': personSitesMapping,
+      };
 }
+
+// ------------------ End of models ------------------
+
+// Convenience helpers
+TaskAndActivityDetailsModel TaskAndActivityDetailsModelFromJson(String str) =>
+    TaskAndActivityDetailsModel.fromJson(json.decode(str) as Map<String, dynamic>);
+
+String TaskAndActivityDetailsModelToJson(TaskAndActivityDetailsModel data) =>
+    json.encode(data.toJson());

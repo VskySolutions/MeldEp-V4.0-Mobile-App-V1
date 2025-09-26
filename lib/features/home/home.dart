@@ -178,8 +178,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: ReusableAppBar(title: "Home"),
-      body: !isDev 
-          ? const Center(child: Text("Home screen"))
+      body: !isDev
+          ? const Center(
+              child: Card(
+                  elevation: 3,
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text("Welcome To Meldep", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  )))
           : SafeArea(
               child: RefreshIndicator(
                 color: AppColors.PRIMARY,

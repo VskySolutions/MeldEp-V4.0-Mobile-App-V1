@@ -280,6 +280,15 @@ class _TimesheetFilterPopupState extends State<TimesheetFilterPopup> {
                 });
                 _fetchProjectModuleNameIds();
               },
+              onCleared: () {
+                setState(() {
+                  _selectedProjectId = null;
+                  _selectedModuleId = null;
+                  _selectedTaskId = null;
+                  projectModulesDropdown = [];
+                  projectTasksDropdown = [];
+                });
+              },
             ),
             SizedBox(height: 14),
 
@@ -295,6 +304,13 @@ class _TimesheetFilterPopupState extends State<TimesheetFilterPopup> {
                   _selectedModuleId = value;
                 });
                 _fetchProjectTasksNameIds();
+              },
+              onCleared: () {
+                setState(() {
+                  _selectedModuleId = null;
+                  _selectedTaskId = null;
+                  projectTasksDropdown = [];
+                });
               },
             ),
             SizedBox(height: 14),

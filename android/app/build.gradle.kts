@@ -71,10 +71,10 @@ android {
         applicationIdSuffix = ".dev"
         resValue("string", "app_name", "Meld-EP Dev")
         }
-        create("staging") {
-        dimension = "environment"
-        applicationIdSuffix = ".staging"
-        resValue("string", "app_name", "Meld-EP Staging")
+        create("uat") {
+            dimension = "environment"
+            applicationIdSuffix = ".uat"
+            resValue("string", "app_name", "Meld-EP UAT")
         }
         create("prod") {
         dimension = "environment"

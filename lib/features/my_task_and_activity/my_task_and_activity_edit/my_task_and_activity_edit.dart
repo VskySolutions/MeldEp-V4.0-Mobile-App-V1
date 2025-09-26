@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +8,7 @@ import 'package:test_project/core/dialogs/confirmation_dialog.dart';
 import 'package:test_project/core/theme/app_colors.dart';
 import 'package:test_project/core/utils/validators.dart';
 import 'package:test_project/core/widgets/custom_snackbar.dart';
+import 'package:test_project/core/widgets/dropdown/activity_status_field_dropdown.dart';
 import 'package:test_project/core/widgets/input_field/custom_rich_quill_value.dart';
 import 'package:test_project/features/my_task_and_activity/model/project_activity_details_model.dart';
 import 'package:test_project/features/my_task_and_activity/my_task_and_activity_service.dart';
@@ -28,11 +31,16 @@ class _ProjectActivityEditScreenState
   /// Variable Declarations
   /// --------------------------------------------------------------------------------------------------------------------------------------------------
 
-  ProjectActivityDetailsModel? _activityDetails;
+  String? _selectedActivityStatusId;
+  String? _descriptionInitialHtml;
 
   // Loading flags
   bool _isLoading = true;
   bool _isSubmitting = false;
+
+  // Data
+  ProjectActivityDetailsModel? _activityDetails;
+  List<Map<String, String>> activityStatusDropdown = [];
 
   // Controllers
   final TextEditingController _estimateHoursController =
@@ -49,7 +57,14 @@ class _ProjectActivityEditScreenState
   @override
   void initState() {
     super.initState();
-    _fetchActivityDetails();
+    _initializeData();
+  }
+
+  void _initializeData() async {
+    setState(() => _isLoading = true);
+    await _fetchActivityDetails();
+    await _fetchActivityStatus();
+    setState(() => _isLoading = false);
   }
 
   @override
@@ -65,7 +80,6 @@ class _ProjectActivityEditScreenState
 
   /// Fetches activity details by id and populates form fields.
   Future<void> _fetchActivityDetails() async {
-    setState(() => _isLoading = true);
     try {
       final response = await MyTaskAndActivityService.instance
           .getProjectActivityDetails(widget.id);
@@ -77,27 +91,16 @@ class _ProjectActivityEditScreenState
           _estimateHoursController.text =
               (_activityDetails?.estimateHours ?? '').toString();
           _descriptionController.text = _activityDetails?.description ?? '';
-          _isLoading = false;
+          _descriptionInitialHtml = _activityDetails?.description ?? '';
         });
-      } else {
-        setState(() => _isLoading = false);
       }
     } catch (e) {
       debugPrint('Fetch activity details error: $e');
-      setState(() => _isLoading = false);
     }
   }
 
   /// Validates and submits changes; shows feedback and navigates back on success.
-  Future<void> _saveChanges(BuildContext context) async {
-    if (_estimateHoursError != null) return;
-
-    setState(() => _isSubmitting = true);
-    Fluttertoast.showToast(
-      msg: 'Submitting.... Please wait',
-      toastLength: Toast.LENGTH_SHORT,
-      gravity: ToastGravity.BOTTOM,
-    );
+  Future<void> _updateActivityDetails(BuildContext context) async {
 
     final payload = {
       'name': _activityDetails?.name ?? '',
@@ -106,6 +109,7 @@ class _ProjectActivityEditScreenState
       'taskId': _activityDetails?.taskId ?? '',
       'startDateStr': '',
       'endDateStr': '',
+      'activityStatusId': _selectedActivityStatusId ?? _activityDetails?.activityStatus.id ?? '',
       'assignedToId': _activityDetails?.assignedToId ?? '',
       'estimateHours': _estimateHoursController.text,
       'description': _descriptionController.text,
@@ -116,15 +120,13 @@ class _ProjectActivityEditScreenState
           .updateProjectActivity(widget.id, payload);
 
       if (response.statusCode == 204) {
-        setState(() => _isSubmitting = false);
         showCustomSnackBar(
           context,
-          message: 'Task updated successfully',
+          message: 'Activity updated successfully',
           durationSeconds: 2,
         );
         context.pop(true);
       } else {
-        setState(() => _isSubmitting = false);
         showCustomSnackBar(
           context,
           message: 'Failed to update task',
@@ -132,7 +134,6 @@ class _ProjectActivityEditScreenState
         );
       }
     } catch (e) {
-      setState(() => _isSubmitting = false);
       debugPrint('Update activity error: $e');
       showCustomSnackBar(
         context,
@@ -142,9 +143,102 @@ class _ProjectActivityEditScreenState
     }
   }
 
+  Future<void> _fetchActivityStatus() async {
+    try {
+      final response =
+          await MyTaskAndActivityService.instance.fetchActivityStatus();
+      final List<dynamic> dataList = response.data;
+
+      final fetchedActivityStatus = dataList
+          .map((json) => ActivityStatusModel.fromJson(json))
+          .where((m) => m.name != "Close")
+          .toList();
+
+      setState(() {
+        activityStatusDropdown = fetchedActivityStatus
+            .map((module) => {"id": module.id, "name": module.name})
+            .toList();
+      });
+    } catch (e) {
+      // Handle error
+    }
+  }
+
+  Future<bool> _updateActivityStatus(BuildContext context) async {
+    String? selectedActivityStatusName = activityStatusDropdown.firstWhere(
+      (element) => element["id"] == _selectedActivityStatusId,
+      orElse: () => {},
+    )["name"];
+
+    if (_selectedActivityStatusId == null || _activityDetails?.id == null || selectedActivityStatusName == null) return false;
+
+    final Map<String, dynamic> payload = {
+      "activityIds": [_activityDetails?.id],
+      "activityStatusId": _selectedActivityStatusId,
+    };
+
+    try {
+      final response =
+          await MyTaskAndActivityService.instance.changeActivityStatus(payload);
+      if (response.statusCode == 204) {
+        return true;
+      } else {
+        showCustomSnackBar(
+          context,
+          message: 'Failed to change activity status',
+          backgroundColor: AppColors.ERROR,
+        );
+      }
+    } catch (e) {
+      debugPrint('Change activity status error: $e');
+      showCustomSnackBar(
+        context,
+        message: 'Error changing activity status',
+        backgroundColor: AppColors.ERROR,
+      );
+    }
+    finally {
+      return false;
+    }
+  }
+
   /// --------------------------------------------------------------------------------------------------------------------------------------------------
   /// Actions & Event Handlers
   /// --------------------------------------------------------------------------------------------------------------------------------------------------
+
+  /// Validate conditions and update activity details and activity status.
+  void _onSavePressed(BuildContext context) async {
+    if (_estimateHoursError != null) return;
+    String? selectedActivityStatusName = activityStatusDropdown.firstWhere(
+      (element) => element["id"] == _selectedActivityStatusId,
+      orElse: () => {},
+    )["name"];
+    if (selectedActivityStatusName != null &&
+        selectedActivityStatusName.toLowerCase() == 'open' &&
+        _descriptionController.text.isEmpty) {
+      showCustomSnackBar(
+        context,
+        message: 'Description is required when status is Open',
+        backgroundColor: AppColors.ERROR,
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    Fluttertoast.showToast(
+      msg: 'Submitting.... Please wait',
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+    );
+
+    try {
+      await _updateActivityDetails(context);
+    } catch (e) {
+      debugPrint('Error in onSavePressed: $e');
+    } finally {
+      setState(() => _isSubmitting = false);
+    }
+  }
 
   /// Validates estimate hours as the user types.
   void _onEstimateHoursChanged(String value) {
@@ -275,8 +369,19 @@ class _ProjectActivityEditScreenState
                     ),
 
                     const SizedBox(height: 12),
+                    ActivityStatusFieldDropdown(
+                      items: activityStatusDropdown,
+                      currentId: _activityDetails!.activityStatus.id,
+                      currentName:
+                          _activityDetails!.activityStatus.dropDownValue,
+                      labelText: 'Status',
+                      enabled: true,
+                      onChanged: (id) {
+                        setState(() => _selectedActivityStatusId = id);
+                      },
+                    ),
 
-                    // Activity Details editor
+                    const SizedBox(height: 12),
                     InputDecorator(
                       decoration: const InputDecoration(
                         labelText: 'Activity Details',
@@ -285,10 +390,11 @@ class _ProjectActivityEditScreenState
                         isDense: true,
                         contentPadding: EdgeInsets.all(8),
                       ),
-                      child: HtmlEmailEditor(
+                      child: HtmlEditorInputField(
                         editorHeight: 180,
-                        initialHtml: _descriptionController.text,
+                        initialHtml: _descriptionInitialHtml,
                         onChanged: (html) {
+                          setState(() {});
                           _descriptionController.text = html;
                         },
                       ),
@@ -308,7 +414,7 @@ class _ProjectActivityEditScreenState
                 child: FloatingActionButton(
                   onPressed: _isLoading || _isSubmitting
                       ? null
-                      : () => _saveChanges(context),
+                      : () => _onSavePressed(context),
                   backgroundColor: AppColors.PRIMARY,
                   child: _isSubmitting
                       ? const SizedBox(
@@ -347,6 +453,20 @@ class _ProjectActivityEditScreenState
           ],
         ),
       ),
+    );
+  }
+}
+
+class ActivityStatusModel {
+  final String id;
+  final String name;
+
+  ActivityStatusModel({required this.id, required this.name});
+
+  factory ActivityStatusModel.fromJson(Map<String, dynamic> json) {
+    return ActivityStatusModel(
+      id: json['id'] ?? '',
+      name: json['dropdownValue'] ?? '',
     );
   }
 }

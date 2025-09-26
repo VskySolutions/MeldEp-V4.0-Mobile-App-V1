@@ -30,10 +30,10 @@ Future<void> _logoutAndHandle(
     // callback to allow navigation/clearing state
     onComplete?.call();
   } catch (e) {
-    Fluttertoast.showToast(
-      msg: "An error occurred while logging out",
-      toastLength: Toast.LENGTH_SHORT,
-      gravity: ToastGravity.BOTTOM,
-    );
+    // Fluttertoast.showToast(
+    //   msg: "An error occurred while logging out",
+    //   toastLength: Toast.LENGTH_SHORT,
+    //   gravity: ToastGravity.BOTTOM,
+    // );
   }
 }

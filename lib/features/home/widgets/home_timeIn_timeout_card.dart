@@ -917,7 +917,7 @@ class HomeTimeInTimeOutCardState extends State<HomeTimeInTimeOutCard> {
 
                     // 5. Timer colour
                     Color timerColor = AppColors.PRIMARY;
-                    if (remainingSecs <= 300) timerColor = Colors.amber;
+                    if (remainingSecs <= 300) timerColor = AppColors.WARNING;
                     if (remainingSecs < 0) timerColor = AppColors.ERROR;
                     if (breakData.breakReason == "Lunch break" &&
                         remainingSecs < 0 &&

@@ -7,4 +7,8 @@ class AuthServices {
   Future<dynamic> login(Map<String, dynamic> loginData) async {
     return await Network.anonDio.post('/auth/login', data: loginData);
   }
+
+  Future<dynamic> forgotPassword(Map<String, dynamic> data) async {
+    return await Network.anonDio.post('/auth/forgot-password', data: data);
+  }
 }
