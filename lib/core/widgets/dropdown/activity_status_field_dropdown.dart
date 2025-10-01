@@ -117,7 +117,11 @@ class _ActivityStatusFieldDropdownState
       final id = (m['id'] ?? '').trim();
       final name = (m['name'] ?? '').trim();
       final isOpen = name.toLowerCase() == 'open';
-      final enabled = !(widget.disableOpen && isOpen);
+      // final bool isNotNewLabel = widget.currentName.trim().toLowerCase() != 'new' && name.trim().toLowerCase() == 'new';
+      final bool isNotNewLabel =
+          widget.currentName.trim().toLowerCase() == 'open' &&
+              name.trim().toLowerCase() == 'new';
+      final enabled = !(widget.disableOpen && isOpen || isNotNewLabel);
 
       return PopupMenuItem<String>(
         // Don’t return empty values; only non-empty ids participate in selection.

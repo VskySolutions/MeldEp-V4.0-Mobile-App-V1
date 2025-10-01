@@ -37,7 +37,10 @@ Widget BuildActivityStatusPillDropdown({
         final String id = m['id'] ?? '';
         final String name = m['name'] ?? '';
         final bool isOpenLabel = name.trim().toLowerCase() == 'open';
-        final bool isDisabled = disableOpen && isOpenLabel;
+        // final bool isNotNewLabel = currentName.trim().toLowerCase() != 'new' && name.trim().toLowerCase() == 'new';
+        final bool isNotNewLabel = currentName.trim().toLowerCase() == 'open' && name.trim().toLowerCase() == 'new';
+        final bool isDisabled = disableOpen && isOpenLabel || isNotNewLabel;
+
         return PopupMenuItem<String>(
           value: id,
           enabled: !isDisabled,
@@ -115,8 +118,11 @@ _StatusColors _statusColorsFor(String statusName) {
   if (s.startsWith('new')) {
     return const _StatusColors(Color(0xFF1B75AB), Color.fromARGB(255, 153, 204, 245));
   }
+  if (s == 'on hold') {
+    return const _StatusColors(Color.fromARGB(255, 165, 42, 42), Color.fromARGB(92, 165, 42, 42));
+  }
   if (s == 'open') {
-    return const _StatusColors(Color(0xFF800080), Color.fromARGB(255, 213, 162, 223));
+    return const _StatusColors(Color.fromARGB(255, 228, 36, 100), Color.fromARGB(255, 213, 162, 223));
   }
   if (s == 'completed') {
     return const _StatusColors(Color(0xFF008000), Color.fromARGB(255, 167, 224, 170));

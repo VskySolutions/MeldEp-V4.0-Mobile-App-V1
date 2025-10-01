@@ -37,7 +37,7 @@ class CustomTypeAheadField extends StatefulWidget {
     this.suggestionsController,
     this.onOpen,
     this.onSelectedItem,
-    this.propagateOnClear = false,
+    this.propagateOnClear = true,
   }) : super(key: key);
 
   @override

@@ -160,6 +160,11 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
         setState(() {
           _timesheetCardsList = fetchedCards;
         });
+        for (int i = 0; i < lines.length; i++) {
+          await _loadModuleOptionsForProject(i);
+          await _loadTaskOptionsForModule(i);
+          await _loadActivityOptionsForTaskAndDate(i);
+        }
       } else {
         throw Exception(
           'Failed to fetch timesheet. Status: ${response.statusCode}',

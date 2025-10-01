@@ -66,6 +66,10 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
   String? _searchActiveStatus = 'Active';
   DateTime? _searchTargetMonth;
 
+  // Static Search
+  TextEditingController? _staticSearchFilterController;
+  bool _isShowStaticSearchField = false;
+
   /// --------------------------------------------------------------------------------------------------------------------------------------------------
   /// Lifecycle
   /// --------------------------------------------------------------------------------------------------------------------------------------------------
@@ -425,20 +429,93 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
                               child: Row(children: _buildFilterChips()),
                             ),
                           ),
-                          ElevatedButton.icon(
-                            onPressed: _showFilterDialog,
-                            label: Text(
-                              'Filter',
-                              style: TextStyle(color: AppColors.PRIMARY),
-                            ),
-                            icon: Icon(
-                              Icons.filter_list,
-                              color: AppColors.PRIMARY,
+                          // ElevatedButton.icon(
+                          //   onPressed: _showFilterDialog,
+                          //   label: Text(
+                          //     'Filter',
+                          //     style: TextStyle(color: AppColors.PRIMARY),
+                          //   ),
+                          //   icon: Icon(
+                          //     Icons.filter_list,
+                          //     color: AppColors.PRIMARY,
+                          //   ),
+                          // ),
+                          Material(
+                            elevation: 2,
+                            borderRadius: BorderRadius.circular(24),
+                            child: Container(
+                              // width: double.infinity,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                // color: Colors.white,
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  InkWell(
+                                    onTap: () {
+                                      setState(() {
+                                        _isShowStaticSearchField = !_isShowStaticSearchField;
+                                      });
+                                    },
+                                    borderRadius: BorderRadius.horizontal(
+                                      left: Radius.circular(24),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                      ),
+                                      child: Icon(
+                                        Icons.search,
+                                        color: AppColors.PRIMARY,
+                                      ),
+                                    ),
+                                  ),
+                                  Container(
+                                    width: 1,
+                                    height: 24,
+                                    color: Colors.grey.shade300,
+                                  ),
+                                  InkWell(
+                                    onTap: _showFilterDialog,
+                                    borderRadius: BorderRadius.horizontal(
+                                      right: Radius.circular(24),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                      ),
+                                      child: Icon(
+                                        Icons.filter_alt_outlined,
+                                        color: AppColors.PRIMARY,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
+                    if (_isShowStaticSearchField)
+                      TextFormField(
+                        controller: _staticSearchFilterController,
+                        // maxLines: 2,
+                        // validator: (value) => Validators.validateDescription(
+                        //   (value ?? '').trim(),
+                        //   fieldName: 'Mov. Register Description',
+                        // ),
+                        // onFieldSubmitted: (_) => _onSubmitPressed(),
+                        decoration: const InputDecoration(
+                          labelText: 'Search',
+                          hintText: 'Search',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                      ),
                     Center(
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -822,112 +899,131 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
                                           ),
                                         ),
 
-                                        // Title row (project > module > task > activity)
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                              top: 4, left: 10, right: 10),
-                                          child: Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Expanded(
-                                                child: Wrap(
-                                                  crossAxisAlignment:
-                                                      WrapCrossAlignment.center,
-                                                  spacing: 4,
-                                                  runSpacing: 4,
-                                                  children: [
-                                                    if (disableOpen ||
-                                                        currentName
-                                                                .toLowerCase() !=
-                                                            'open')
-                                                      Icon(Icons.circle,
-                                                          color:
-                                                              AppColors.ERROR,
-                                                          size: 18),
-                                                    // projectName (inline fallback)
-                                                    Text(
-                                                      task.projectName
-                                                              .isNotEmpty
-                                                          ? task.projectName
-                                                          : (task.project
-                                                                  ?.name ??
-                                                              ''),
-                                                      style: const TextStyle(
-                                                          fontWeight:
-                                                              FontWeight.bold),
-                                                    ),
-                                                    Icon(Icons.double_arrow,
-                                                        color: Colors.grey[600],
-                                                        size: 18),
-                                                    // projectModuleName (inline fallback)
-                                                    if ((task.projectModuleName
-                                                                ?.isNotEmpty ??
-                                                            false) ||
-                                                        (task
-                                                                .projectModule
-                                                                ?.name
-                                                                ?.isNotEmpty ??
-                                                            false))
+                                        Container(
+                                          color: disableOpen ||
+                                                  currentName.toLowerCase() !=
+                                                      'open'
+                                              ? const Color.fromARGB(
+                                                  255, 253, 236, 234)
+                                              : null,
+                                          child: Padding(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 4,
+                                            ),
+                                            child: Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Expanded(
+                                                  child: Wrap(
+                                                    crossAxisAlignment:
+                                                        WrapCrossAlignment
+                                                            .center,
+                                                    spacing: 4,
+                                                    runSpacing: 4,
+                                                    children: [
+                                                      // if (disableOpen ||
+                                                      //     currentName
+                                                      //             .toLowerCase() !=
+                                                      //         'open')
+                                                      //   Icon(Icons.circle,
+                                                      //       color:
+                                                      //           AppColors.ERROR,
+                                                      //       size: 18),
+                                                      // projectName (inline fallback)
                                                       Text(
-                                                        (task.projectModuleName
-                                                                    ?.isNotEmpty ==
-                                                                true)
-                                                            ? task
-                                                                .projectModuleName!
-                                                            : (task.projectModule
+                                                        task.projectName
+                                                                .isNotEmpty
+                                                            ? task.projectName
+                                                            : (task.project
                                                                     ?.name ??
                                                                 ''),
+                                                        style: const TextStyle(
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .bold),
                                                       ),
-                                                    Icon(Icons.double_arrow,
-                                                        color: Colors.grey[600],
-                                                        size: 18),
-                                                    // taskName (inline fallback)
-                                                    Text(task
-                                                            .taskName.isNotEmpty
-                                                        ? task.taskName
-                                                        : (task.task?.name ??
-                                                            '')),
-                                                    // activity name (top-level 'name' field)
-                                                    if (task.name.isNotEmpty)
-                                                      Text('(${task.name})',
-                                                          style: const TextStyle(
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold)),
-                                                    Tooltip(
-                                                      message: activityNameDescription
-                                                              .isNotEmpty
-                                                          ? activityNameDescription
-                                                          : 'No description',
-                                                      preferBelow: true,
-                                                      child: GestureDetector(
-                                                        onTap: () =>
-                                                            Fluttertoast
-                                                                .showToast(
-                                                          msg:
-                                                              "Press and hold to view activity description",
+                                                      Icon(Icons.double_arrow,
+                                                          color:
+                                                              Colors.grey[600],
+                                                          size: 18),
+                                                      // projectModuleName (inline fallback)
+                                                      if ((task.projectModuleName
+                                                                  ?.isNotEmpty ??
+                                                              false) ||
+                                                          (task
+                                                                  .projectModule
+                                                                  ?.name
+                                                                  ?.isNotEmpty ??
+                                                              false))
+                                                        Text(
+                                                          (task.projectModuleName
+                                                                      ?.isNotEmpty ==
+                                                                  true)
+                                                              ? task
+                                                                  .projectModuleName!
+                                                              : (task.projectModule
+                                                                      ?.name ??
+                                                                  ''),
                                                         ),
-                                                        child: Icon(
-                                                            Icons.info_outline,
-                                                            size: 18,
-                                                            color: Colors
-                                                                .grey[800]),
+                                                      Icon(Icons.double_arrow,
+                                                          color:
+                                                              Colors.grey[600],
+                                                          size: 18),
+                                                      // taskName (inline fallback)
+                                                      Text(task.taskName
+                                                              .isNotEmpty
+                                                          ? task.taskName
+                                                          : (task.task?.name ??
+                                                              '')),
+                                                      // activity name (top-level 'name' field)
+                                                      if (task.name.isNotEmpty)
+                                                        Text('(${task.name})',
+                                                            style: const TextStyle(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold)),
+                                                      Tooltip(
+                                                        message: activityNameDescription
+                                                                .isNotEmpty
+                                                            ? activityNameDescription
+                                                            : 'No description',
+                                                        preferBelow: true,
+                                                        child: GestureDetector(
+                                                          onTap: () =>
+                                                              Fluttertoast
+                                                                  .showToast(
+                                                            msg:
+                                                                "Press and hold to view activity description",
+                                                          ),
+                                                          child: Icon(
+                                                              Icons
+                                                                  .info_outline,
+                                                              size: 18,
+                                                              color: Colors
+                                                                  .grey[800]),
+                                                        ),
                                                       ),
-                                                    ),
-                                                  ],
+                                                    ],
+                                                  ),
                                                 ),
-                                              ),
-                                            ],
+                                              ],
+                                            ),
                                           ),
                                         ),
 
-                                        const Divider(),
+                                        const Divider(
+                                            height: 1,
+                                            thickness: 1,
+                                            color: Colors.grey),
 
                                         // bottom row: assigned to, status pill, estimate hours
                                         Padding(
-                                          padding: const EdgeInsets.only(
-                                              left: 10, right: 10, bottom: 4),
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 4,
+                                          ),
                                           child: Row(
                                             children: [
                                               Tooltip(

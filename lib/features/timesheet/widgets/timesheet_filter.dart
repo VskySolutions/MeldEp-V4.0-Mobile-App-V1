@@ -117,6 +117,8 @@ class _TimesheetFilterPopupState extends State<TimesheetFilterPopup> {
     try {
       setState(() => _isLoading = true);
       await Future.wait([_fetchEmployeeNameIds(), _fetchProjectNameIds()]);
+      if(widget.initialModuleId != null) await _fetchProjectModuleNameIds();
+      if(widget.initialTaskId != null) await _fetchProjectTasksNameIds();
       setState(() => _isLoading = false);
     } catch (e) {
       setState(() => _isLoading = false);
