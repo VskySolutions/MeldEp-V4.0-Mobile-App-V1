@@ -1,0 +1,27 @@
+09-26-2025
+Release note:
+Major Highlights
+Enabled automatic data refresh whenever a screen gains focus or the user navigates to it.
+Added pull-to-refresh message at the top of screens that support pull-to-refresh.
+Integrated a rich-text input package, created a reusable rich-text component, and implemented it across the app.
+Added rich-text support in My Task & Activity > Card > View > Activity Details.
+Added a Meetings/Calendar flow: new Calendar screen (Time Buddy), ICS URL input card, fetch/display ICS data in cards, month/year filters, and ability to create a timesheet from a meeting (preview subject → select Project > Module > Task > Activity → add timesheet line).
+Added a status dropdown in My Task & Activity card so users can change activity status; prevented adding timesheet entries for non-Open activities and prevented marking an activity Open until activity details are added.
+Replaced Start/End Date with Created/Updated Date in View Task Activity.
+UI / UX Improvements
+Standardized naming conventions (is/has for booleans, …List for collections, clear handler names, and consistent load/build/update function patterns) — code style only, no behavior changes.
+Aligned and grouped imports consistently (Flutter / third-party first, then project imports).
+Reorganized file structure with consistent sections: Variable Declarations, Lifecycle, API Calls & Data Ops, Actions & Event Handlers, UI, UI Helpers, Model — for better readability.
+Improved Apply Leave bottom card: made Employee Name header visible and prevented Save button from blocking content.
+Started work to show only necessary header options in Rich Text Field across screens.
+Bug Fixes & Quality
+Fixed task/module filters so selecting a Project updates its Module list correctly and modules update when project changes. (#9965)
+Fixed reversed text input in Timesheet textbox. (#10015)
+Fixed Timesheet dropdown showing limited values and improved dropdown filtering behavior. (#10016)
+Restored missing timesheet validation and required-field handling. (#10017)
+Sorted Task dropdown values alphabetically. (#10018)
+Fixed sequential loading of Timesheet/My Tasks & Activities filters and ensured parent-child clearing logic. (#10019)
+Fixed Leave Type dropdown not closing after selection. (#10026)
+Addressed multiple UI/UX issues reported (icons, placeholders, field colors, note editing, forgot-password link): #9962, #9963, #9964, #9970, #9972, #9973, #9974.
+Fixed Android 13 navigation issues by updating manifest and dependencies for compatibility.
+Resolved invalid ICS key redirect issue handling. (#10067)

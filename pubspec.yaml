@@ -53,6 +53,9 @@ dependencies:
   vsc_quill_delta_to_html: ^1.0.5
   syncfusion_flutter_calendar: ^31.1.20
   icalendar_parser: ^2.1.0
+  firebase_core: ^4.1.1
+  flutter_local_notifications: ^19.4.2
+  firebase_messaging: ^16.0.2
   # selector_wheel: ^1.1.2
   # file_picker: ^5.2.5
 
