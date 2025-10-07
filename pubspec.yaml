@@ -56,6 +56,9 @@ dependencies:
   firebase_core: ^4.1.1
   flutter_local_notifications: ^19.4.2
   firebase_messaging: ^16.0.2
+  flutter_launcher_icons: ^0.14.4
+  google_mlkit_face_detection: ^0.13.1
+  path_provider: ^2.1.5
   # selector_wheel: ^1.1.2
   # file_picker: ^5.2.5
 
@@ -63,7 +66,14 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  flutter_launcher_icons: ^0.10.0
+
+
+# flutter_native_splash:
+#   color: "#FFFFFF"
+#   image: assets/icon/vskyLogo.png
+#   android: true
+#   ios: true
+#   web: false
 
 flutter_icons:
   android: true
@@ -90,6 +100,9 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/images/meld-epLogo.png
+    - assets/icon/vskyLogo.png
+    - assets/images/square_black_frame_specs.png
+    - assets/images/round_black_frame_specs.png
     - config/.env.dev
     - config/.env.uat
     - config/.env.prod

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
@@ -37,6 +39,12 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
   DateTime? _searchAppliedDate;
   String? _searchYear = DateTime.now().year.toString();
 
+  // Static Search
+  final TextEditingController _staticSearchFilterController =
+      TextEditingController();
+  bool _isShowStaticSearchField = false;
+  Timer? _searchDebounceTimer;
+
   // Data (lists end with List)
   List<LeaveRecord> _leaveRecordsList = <LeaveRecord>[];
 
@@ -48,6 +56,13 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
     super.initState();
     _loadAdminRoleFlag();
     _loadLeaveRecords();
+  }
+
+  @override
+  void dispose() {
+    _searchDebounceTimer?.cancel();
+    _staticSearchFilterController.dispose();
+    super.dispose();
   }
 
   /// -----------------------------------------------------------------------------
@@ -70,13 +85,23 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
   }
 
   /// Loads a page of leave records using current filters; appends on isLoadMore.
-  Future<void> _loadLeaveRecords({bool isLoadMore = false}) async {
+  Future<void> _loadLeaveRecords({
+    bool isLoadMore = false,
+    bool isSearchLoad = false,
+    String? searchText,
+  }) async {
     if (_isLeaveDataLoading) return;
 
     if (!isLoadMore) {
       setState(() {
         _currentPage = 1;
         _isInitialLoading = true;
+      });
+    }
+
+    if (isSearchLoad) {
+      setState(() {
+        _currentPage = 1;
       });
     }
 
@@ -92,7 +117,7 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
       "page": _currentPage,
       "pageSize": 15,
       "personIds": [],
-      "searchText": "",
+      "searchText": searchText ?? "",
       "sortBy": "createdOnUtc",
       "statusIds": _searchStatusId != null ? [_searchStatusId] : [],
       "years": _searchYear,
@@ -169,6 +194,14 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
     );
   }
 
+  void _onStaticSearchFilterChange(String value) {
+    if (_searchDebounceTimer?.isActive ?? false) _searchDebounceTimer?.cancel();
+    _searchDebounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _loadLeaveRecords(
+          searchText: value, isSearchLoad: true, isLoadMore: true);
+    });
+  }
+
   /// -----------------------------------------------------------------------------
   /// UI Helpers
   /// -----------------------------------------------------------------------------
@@ -226,20 +259,113 @@ class _ApplyLeaveScreenState extends State<ApplyLeaveScreen> {
                           child: Row(children: _buildFilterChips()),
                         ),
                       ),
-                      ElevatedButton.icon(
-                        onPressed: _onFilterPressed,
-                        label: const Text(
-                          'Filter',
-                          style: TextStyle(color: AppColors.PRIMARY),
-                        ),
-                        icon: const Icon(
-                          Icons.filter_list,
-                          color: AppColors.PRIMARY,
+                      // ElevatedButton.icon(
+                      //   onPressed: _onFilterPressed,
+                      //   label: const Text(
+                      //     'Filter',
+                      //     style: TextStyle(color: AppColors.PRIMARY),
+                      //   ),
+                      //   icon: const Icon(
+                      //     Icons.filter_list,
+                      //     color: AppColors.PRIMARY,
+                      //   ),
+                      // ),
+                      Material(
+                        elevation: 2,
+                        borderRadius: BorderRadius.circular(24),
+                        child: Container(
+                          height: 40,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              InkWell(
+                                onTap: () {
+                                  _isShowStaticSearchField
+                                      ? _onStaticSearchFilterChange("")
+                                      : null;
+                                  setState(() {
+                                    _staticSearchFilterController.clear();
+                                    _isShowStaticSearchField =
+                                        !_isShowStaticSearchField;
+                                  });
+                                },
+                                borderRadius: BorderRadius.horizontal(
+                                  left: Radius.circular(24),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                  ),
+                                  child: Icon(
+                                    _isShowStaticSearchField
+                                        ? Icons.search_off_outlined
+                                        : Icons.search,
+                                    color: AppColors.PRIMARY,
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                width: 1,
+                                height: 24,
+                                color: Colors.grey.shade300,
+                              ),
+                              InkWell(
+                                onTap: _onFilterPressed,
+                                borderRadius: BorderRadius.horizontal(
+                                  right: Radius.circular(24),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                  ),
+                                  child: Icon(
+                                    Icons.filter_alt_outlined,
+                                    color: AppColors.PRIMARY,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
+                if (_isShowStaticSearchField)
+                  Padding(
+                    padding:
+                        const EdgeInsets.only(left: 8, right: 8, bottom: 8),
+                    child: TextFormField(
+                      controller: _staticSearchFilterController,
+                      onChanged: (value) => _onStaticSearchFilterChange(value),
+                      decoration: InputDecoration(
+                        labelText: 'Search',
+                        hintText: 'Search',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                        suffixIcon: _isLeaveDataLoading
+                            ? Transform.scale(
+                                scale: 0.4,
+                                child: CircularProgressIndicator(
+                                  color: AppColors.PRIMARY,
+                                  strokeWidth: 4,
+                                ),
+                              )
+                            : IconButton(
+                                icon: const Icon(Icons.cancel_outlined),
+                                onPressed: () {
+                                  setState(() {
+                                    _staticSearchFilterController.clear();
+                                  });
+                                  _onStaticSearchFilterChange("");
+                                },
+                              ),
+                      ),
+                    ),
+                  ),
                 Center(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,

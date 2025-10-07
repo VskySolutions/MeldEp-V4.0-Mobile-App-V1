@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:test_project/boot/auth.dart';
 import 'package:test_project/features/auth/forgot_password/forgot_password_screen.dart';
+import 'package:test_project/features/eye_glasses_ar/eye_glasses_ar_screen.dart';
 import 'package:test_project/features/home/home.dart';
 import 'package:test_project/features/my_task_and_activity/fill_timesheet/fill_timesheet_screen.dart';
 import 'package:test_project/features/my_task_and_activity/my_task_and_activity_edit/my_task_and_activity_edit.dart';
@@ -198,6 +199,19 @@ class AppRouter {
                     pageBuilder: (context, state) => NoTransitionPage(
                       key: ValueKey('time_buddy-${state.uri.toString()}'),
                       child: MeetingsScreen(),
+                    ),
+                  ),
+                ],
+              ),
+
+              StatefulShellBranch(
+                routes: [
+                  GoRoute(
+                    name: 'eyeGlassesAR',
+                    path: '/main/eyeGlassesAR',
+                    pageBuilder: (context, state) => NoTransitionPage(
+                      key: ValueKey('time_buddy-${state.uri.toString()}'),
+                      child: EyeGlassesArScreen(),
                     ),
                   ),
                 ],

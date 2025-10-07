@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:fluttertoast/fluttertoast.dart';
@@ -67,8 +69,10 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
   DateTime? _searchTargetMonth;
 
   // Static Search
-  TextEditingController? _staticSearchFilterController;
+  final TextEditingController _staticSearchFilterController =
+      TextEditingController();
   bool _isShowStaticSearchField = false;
+  Timer? _searchDepounceTimer;
 
   /// --------------------------------------------------------------------------------------------------------------------------------------------------
   /// Lifecycle
@@ -81,6 +85,13 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
     _fetchActivityStatus();
   }
 
+  @override
+  void dispose() {
+    _searchDepounceTimer?.cancel();
+    _staticSearchFilterController.dispose();
+    super.dispose();
+  }
+
   /// --------------------------------------------------------------------------------------------------------------------------------------------------
   /// API Calls & Data Ops
   /// --------------------------------------------------------------------------------------------------------------------------------------------------
@@ -89,6 +100,8 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
   Future<void> _fetchTasks({
     bool isGetEmployeeId = false,
     bool isLoadMore = false,
+    bool isSearchLoad = false,
+    String searchText = "",
   }) async {
     if (_isLoading) return;
 
@@ -96,6 +109,13 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
       setState(() {
         _currentPage = 1;
         _isTaskActivityInitialLoading = true;
+        _selectedIds.clear();
+      });
+    }
+
+    if (isSearchLoad) {
+      setState(() {
+        _currentPage = 1;
         _selectedIds.clear();
       });
     }
@@ -122,7 +142,7 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
       "projectIds": _searchProjectId != null ? [_searchProjectId] : [],
       "projectModuleIds":
           _searchProjectModuleId != null ? [_searchProjectModuleId] : [],
-      "searchText": "",
+      "searchText": searchText,
       "sortBy": "project.name",
       "statusIds": _searchTaskStatusId != null ? [_searchTaskStatusId] : [],
     };
@@ -322,6 +342,13 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
     return null;
   }
 
+  void _onStaticSearchFilterChange(String value) {
+    if (_searchDepounceTimer?.isActive ?? false) _searchDepounceTimer?.cancel();
+    _searchDepounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _fetchTasks(searchText: value, isSearchLoad: true, isLoadMore: true);
+    });
+  }
+
   /// --------------------------------------------------------------------------------------------------------------------------------------------------
   /// UI Helpers
   /// --------------------------------------------------------------------------------------------------------------------------------------------------
@@ -418,8 +445,8 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
                   children: [
                     Container(
                       padding: EdgeInsets.symmetric(
-                        horizontal: 10,
                         vertical: 8,
+                        horizontal: 10,
                       ),
                       child: Row(
                         children: [
@@ -429,25 +456,12 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
                               child: Row(children: _buildFilterChips()),
                             ),
                           ),
-                          // ElevatedButton.icon(
-                          //   onPressed: _showFilterDialog,
-                          //   label: Text(
-                          //     'Filter',
-                          //     style: TextStyle(color: AppColors.PRIMARY),
-                          //   ),
-                          //   icon: Icon(
-                          //     Icons.filter_list,
-                          //     color: AppColors.PRIMARY,
-                          //   ),
-                          // ),
                           Material(
                             elevation: 2,
                             borderRadius: BorderRadius.circular(24),
                             child: Container(
-                              // width: double.infinity,
                               height: 40,
                               decoration: BoxDecoration(
-                                // color: Colors.white,
                                 borderRadius: BorderRadius.circular(24),
                               ),
                               child: Row(
@@ -456,8 +470,13 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
                                 children: [
                                   InkWell(
                                     onTap: () {
+                                      _isShowStaticSearchField
+                                          ? _onStaticSearchFilterChange("")
+                                          : null;
                                       setState(() {
-                                        _isShowStaticSearchField = !_isShowStaticSearchField;
+                                        _staticSearchFilterController.clear();
+                                        _isShowStaticSearchField =
+                                            !_isShowStaticSearchField;
                                       });
                                     },
                                     borderRadius: BorderRadius.horizontal(
@@ -468,7 +487,9 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
                                         horizontal: 16,
                                       ),
                                       child: Icon(
-                                        Icons.search,
+                                        _isShowStaticSearchField
+                                            ? Icons.search_off_outlined
+                                            : Icons.search,
                                         color: AppColors.PRIMARY,
                                       ),
                                     ),
@@ -501,19 +522,36 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
                       ),
                     ),
                     if (_isShowStaticSearchField)
-                      TextFormField(
-                        controller: _staticSearchFilterController,
-                        // maxLines: 2,
-                        // validator: (value) => Validators.validateDescription(
-                        //   (value ?? '').trim(),
-                        //   fieldName: 'Mov. Register Description',
-                        // ),
-                        // onFieldSubmitted: (_) => _onSubmitPressed(),
-                        decoration: const InputDecoration(
-                          labelText: 'Search',
-                          hintText: 'Search',
-                          border: OutlineInputBorder(),
-                          isDense: true,
+                      Padding(
+                        padding: const EdgeInsets.only(
+                            left: 10, right: 10, bottom: 8),
+                        child: TextField(
+                          controller: _staticSearchFilterController,
+                          onChanged: (value) =>
+                              _onStaticSearchFilterChange(value),
+                          decoration: InputDecoration(
+                            labelText: 'Search',
+                            hintText: 'Search',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                            suffixIcon: _isTaskActivityLoading
+                                ? Transform.scale(
+                                    scale: 0.4,
+                                    child: CircularProgressIndicator(
+                                      color: AppColors.PRIMARY,
+                                      strokeWidth: 4,
+                                    ),
+                                  )
+                                : IconButton(
+                                    icon: const Icon(Icons.cancel_outlined),
+                                    onPressed: () {
+                                      setState(() {
+                                        _staticSearchFilterController.clear();
+                                      });
+                                      _onStaticSearchFilterChange("");
+                                    },
+                                  ),
+                          ),
                         ),
                       ),
                     Center(
