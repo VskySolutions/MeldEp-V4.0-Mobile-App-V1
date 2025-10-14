@@ -59,14 +59,13 @@ dependencies:
   flutter_launcher_icons: ^0.14.4
   google_mlkit_face_detection: ^0.13.1
   path_provider: ^2.1.5
+  flutter_image_compress: ^2.4.0
   # selector_wheel: ^1.1.2
   # file_picker: ^5.2.5
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-
 
 # flutter_native_splash:
 #   color: "#FFFFFF"

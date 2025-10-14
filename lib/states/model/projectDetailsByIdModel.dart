@@ -1,4 +1,3 @@
-// ✅ Updated projectDetailsByIdModel with null safety fixes
 class projectDetailsByIdModel {
   final String name;
   final String projectName;

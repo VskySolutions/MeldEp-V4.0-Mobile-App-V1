@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class CustomTypeAheadField extends StatefulWidget {
   final List<Map<String, String>> items;
   final String? selectedId;
+  final String? selectedValue;
   final String label;
   final Function(String?) onChanged;
   final bool enabled;
@@ -19,11 +21,13 @@ class CustomTypeAheadField extends StatefulWidget {
   final Future<void> Function()? onOpen;
   final void Function(Map<String, String>? item)? onSelectedItem;
   final bool propagateOnClear;
+  final String? moreInfoDesc;
 
   const CustomTypeAheadField({
     Key? key,
     required this.items,
     required this.selectedId,
+    this.selectedValue,
     required this.label,
     required this.onChanged,
     this.enabled = true,
@@ -38,6 +42,7 @@ class CustomTypeAheadField extends StatefulWidget {
     this.onOpen,
     this.onSelectedItem,
     this.propagateOnClear = true,
+    this.moreInfoDesc,
   }) : super(key: key);
 
   @override
@@ -99,7 +104,10 @@ class _CustomTypeAheadFieldState extends State<CustomTypeAheadField> {
   String _getInitialText() {
     return widget.items.firstWhere(
           (item) => item['id'] == widget.selectedId,
-          orElse: () => {'id': '', 'name': ''},
+          orElse: () => {
+            'id': widget.selectedId ?? "",
+            'name': widget.selectedValue ?? ""
+          },
         )['name'] ??
         '';
   }
@@ -142,8 +150,18 @@ class _CustomTypeAheadFieldState extends State<CustomTypeAheadField> {
           return filtered;
         },
         itemBuilder: (context, Map<String, String> suggestion) {
+          final description = suggestion['description'] ?? "";
           return ListTile(
-            title: Text(suggestion['name'] ?? '', style: widget.textStyle),
+            title: Row(
+              children: [
+                Expanded(
+                  child:
+                      Text(suggestion['name'] ?? '', style: widget.textStyle),
+                ),
+                if (description.isNotEmpty)
+                  InfoTooltipIcon(description: description),
+              ],
+            ),
           );
         },
         onSelected: (Map<String, String> suggestion) {
@@ -155,76 +173,94 @@ class _CustomTypeAheadFieldState extends State<CustomTypeAheadField> {
           setState(() {});
         },
         builder: (context, fieldController, fieldFocusNode) {
-          final showClear = fieldController.text.isNotEmpty && widget.enabled;
-          return TextField(
-            controller: fieldController,
-            focusNode: fieldFocusNode,
-            enabled: widget.enabled,
-            style: widget.textStyle,
-            onChanged: (_) {
-              if (!_typedSinceFocus) {
-                _typedSinceFocus = true;
-                _sugCtrl.refresh();
+          // Find selected item's description
+          final selectedDescription = (() {
+            for (final item in widget.items) {
+              if (item['id'] == widget.selectedId) {
+                return item['description'] ?? "";
               }
-            },
-            decoration: InputDecoration(
-              labelText: widget.label,
-              errorText: widget.errorText,
-              labelStyle: TextStyle(color: Colors.black.withOpacity(0.5)),
-              border: widget.border ?? const OutlineInputBorder(),
-              isDense: true,
-              contentPadding: widget.contentPadding ??
-                  const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-              suffixIcon: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (showClear)
-                    IconButton(
-                      iconSize: 18,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      visualDensity: VisualDensity.compact,
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        fieldController.clear();
-                        widget.onSelectedItem?.call(null);
-                        if (widget.propagateOnClear) {
-                          widget.onChanged(null);
-                        }
-                        widget.onCleared?.call();
-                        _typedSinceFocus = false;
-                        // FIXED: Close dropdown and remove focus to prevent it from showing
-                        _sugCtrl.close();
-                        fieldFocusNode.unfocus();
-                        setState(() {});
-                      },
-                    ),
-                  IconButton(
-                    iconSize: 18,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    visualDensity: VisualDensity.compact,
-                    icon: Icon(
-                      fieldFocusNode.hasFocus
-                          ? Icons.arrow_drop_up
-                          : Icons.arrow_drop_down,
-                    ),
-                    onPressed: widget.enabled
-                        ? () {
-                            _typedSinceFocus = false;
-                            if (fieldFocusNode.hasFocus) {
-                              // Close dropdown by removing focus
-                              fieldFocusNode.unfocus();
-                            } else {
-                              // Open dropdown by requesting focus
-                              fieldFocusNode.requestFocus();
+            }
+            return "";
+          })();
+
+          final showClear = fieldController.text.isNotEmpty && widget.enabled;
+          return Stack(
+            alignment: Alignment.centerRight,
+            children: [
+              TextField(
+                controller: fieldController,
+                focusNode: fieldFocusNode,
+                enabled: widget.enabled,
+                style: widget.textStyle,
+                onChanged: (_) {
+                  if (!_typedSinceFocus) {
+                    _typedSinceFocus = true;
+                    _sugCtrl.refresh();
+                  }
+                },
+                decoration: InputDecoration(
+                  labelText: widget.label,
+                  errorText: widget.errorText,
+                  labelStyle: TextStyle(color: Colors.black.withOpacity(0.5)),
+                  border: widget.border ?? const OutlineInputBorder(),
+                  isDense: true,
+                  suffixIcon: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (showClear)
+                        IconButton(
+                          iconSize: 18,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          visualDensity: VisualDensity.compact,
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            fieldController.clear();
+                            widget.onSelectedItem?.call(null);
+                            if (widget.propagateOnClear) {
+                              widget.onChanged(null);
                             }
-                          }
-                        : null,
+                            widget.onCleared?.call();
+                            _typedSinceFocus = false;
+                            // FIXED: Close dropdown and remove focus to prevent it from showing
+                            _sugCtrl.close();
+                            fieldFocusNode.unfocus();
+                            setState(() {});
+                          },
+                        ),
+                      IconButton(
+                        iconSize: 18,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        visualDensity: VisualDensity.compact,
+                        icon: Icon(
+                          fieldFocusNode.hasFocus
+                              ? Icons.arrow_drop_up
+                              : Icons.arrow_drop_down,
+                        ),
+                        onPressed: widget.enabled
+                            ? () {
+                                _typedSinceFocus = false;
+                                if (fieldFocusNode.hasFocus) {
+                                  // Close dropdown by removing focus
+                                  fieldFocusNode.unfocus();
+                                } else {
+                                  // Open dropdown by requesting focus
+                                  fieldFocusNode.requestFocus();
+                                }
+                              }
+                            : null,
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
+              if (selectedDescription.isNotEmpty && !widget.enabled)
+                Positioned(
+                  right: 50,
+                  child: InfoTooltipIcon(description: selectedDescription),
+                ),
+            ],
           );
         },
         controller: _controller,
@@ -256,7 +292,46 @@ class _CustomTypeAheadFieldState extends State<CustomTypeAheadField> {
             child: Text(widget.noItemsFoundText),
           );
         },
-        constraints: const BoxConstraints(maxHeight: 300),
+        hideWithKeyboard: false,
+        autoFlipDirection: true,
+        offset: const Offset(0, 8),
+      ),
+    );
+  }
+}
+
+class InfoTooltipIcon extends StatelessWidget {
+  final String? description;
+  final double size;
+  final Color? color;
+  final bool preferBelow;
+
+  const InfoTooltipIcon({
+    super.key,
+    required this.description,
+    this.size = 18,
+    this.color,
+    this.preferBelow = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final text = (description?.trim().isNotEmpty == true)
+        ? description!.trim()
+        : 'No description';
+    return Tooltip(
+      message: text,
+      preferBelow: preferBelow,
+      triggerMode: TooltipTriggerMode.longPress,
+      child: GestureDetector(
+        onTap: () => Fluttertoast.showToast(
+          msg: "Press and hold to view activity description",
+        ),
+        child: Icon(
+          Icons.info_outline,
+          size: size,
+          color: color ?? Colors.grey[800],
+        ),
       ),
     );
   }

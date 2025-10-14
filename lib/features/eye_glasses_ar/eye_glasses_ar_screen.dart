@@ -4,10 +4,14 @@ import 'package:flutter/material.dart';
 import 'dart:typed_data';
 import 'dart:math' as math;
 import 'package:flutter/rendering.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:test_project/core/theme/app_colors.dart';
 import 'package:test_project/core/widgets/reusable_app_bar.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 class EyeGlassesArScreen extends StatefulWidget {
   const EyeGlassesArScreen({super.key});
@@ -19,10 +23,65 @@ class EyeGlassesArScreen extends StatefulWidget {
 class _EyeGlassesVRState extends State<EyeGlassesArScreen> {
   File? _selectedImage;
   String? _selectedSpecsAsset;
-  String? _status;
+  String? _loadingStatus;
   Face? _face;
   Size? _imageSize;
   late final FaceDetector _faceDetector;
+
+// Replace your entire guidelines list with this:
+  List<GuidelineItem> guidelines = [
+    // VALIDATABLE ITEMS - these have error checking
+    GuidelineItem(
+      guideline: 'Upload a high-quality photo with size more than 0.5 MB',
+      guidelineError: 'Image too small - upload larger than 0.5 MB',
+      hasError: false,
+      isValidatable: true,
+    ),
+    GuidelineItem(
+      guideline: 'Use a clear, front-facing photo with a single face only',
+      guidelineError: 'Multiple faces or no face detected',
+      hasError: false,
+      isValidatable: true,
+    ),
+    GuidelineItem(
+      guideline: 'Face the camera directly with both eyes visible',
+      guidelineError: 'Eyes not clearly visible or face not straight',
+      hasError: false,
+      isValidatable: true,
+    ),
+    GuidelineItem(
+      guideline: 'Make sure the face occupies a large portion of the photo',
+      guidelineError: 'Face too small in frame - move closer',
+      hasError: false,
+      isValidatable: true,
+    ),
+
+    // STATIC SUGGESTIONS - no error checking, always green
+    GuidelineItem(
+      guideline: 'Use good, even lighting (avoid backlight)',
+      guidelineError: '',
+      hasError: false,
+      isValidatable: false,
+    ),
+    GuidelineItem(
+      guideline: 'Remove existing glasses, hats, or masks',
+      guidelineError: '',
+      hasError: false,
+      isValidatable: false,
+    ),
+    GuidelineItem(
+      guideline: 'Ensure the photo is sharp and in focus for best results',
+      guidelineError: '',
+      hasError: false,
+      isValidatable: false,
+    ),
+  ];
+
+// Update error indices to match new order
+  static const int ERROR_FILE_SIZE = 0; // Upload high-quality photo
+  static const int ERROR_SINGLE_FACE = 1; // Single face only
+  static const int ERROR_FACE_DIRECTION = 2; // Face camera directly
+  static const int ERROR_FACE_SIZE = 3; // Face occupies large portion
 
   @override
   void initState() {
@@ -75,129 +134,142 @@ class _EyeGlassesVRState extends State<EyeGlassesArScreen> {
     await _processPickedImage(tmp);
   }
 
-  // Future<void> _processPickedImage(File file) async {
-  // setState(() {
-  //   _selectedImage = file;
-  //   _selectedSpecsAsset = null;
-  //   _status = 'Processing image...';
-  //   _face = null;
-  //   _imageSize = null;
-  // });
-
-  // final bytes = await file.readAsBytes();
-  // final decoded = await decodeImageFromList(bytes);
-  // final pxSize = Size(decoded.width.toDouble(), decoded.height.toDouble());
-
-  // List<Face> faces = const [];
-  // try {
-  //   final inputImage = InputImage.fromFilePath(file.path);
-  //   faces = await _faceDetector.processImage(inputImage);
-  // } catch (_) {
-  //   // Fallback: re-encode upright and retry once
-  //   try {
-  //     final fixed = await _reencodeUprightPng(bytes);
-  //     final input2 = InputImage.fromFilePath(fixed.path);
-  //     faces = await _faceDetector.processImage(input2);
-  //   } catch (e2) {
-  //     setState(() {
-  //       _status = 'Failed to run face detection. Please try another photo.';
-  //       _imageSize = pxSize;
-  //     });
-  //     return;
-  //   }
-  // }
   Future<void> _processPickedImage(File file) async {
+    // Initialize state and reset only validatable guideline errors
     setState(() {
-      _selectedImage = file;
       _selectedSpecsAsset = null;
-      _status = 'Processing image...';
       _face = null;
       _imageSize = null;
+      _loadingStatus = 'Processing image...';
+      for (var g in guidelines) {
+        if (g.isValidatable) g.hasError = false;
+      }
     });
 
-    final decoded = await decodeImageFromList(await file.readAsBytes());
+    Fluttertoast.showToast(
+      msg: 'Processing image...',
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+    );
+
+    // STEP 1: Read image bytes
+    // STEP 1: Read image bytes
+    setState(() => _loadingStatus = 'Reading image...');
+    var fileBytes = await file.readAsBytes();
+    final fileSizeMB = fileBytes.lengthInBytes / (1024 * 1024);
+
+// STEP 1a: Compress only if larger than 2.5 MB to reduce MLKit latency
+    if (fileSizeMB > 2.5) {
+      setState(() => _loadingStatus = 'Compressing image...');
+      final compressedBytes = await FlutterImageCompress.compressWithList(
+        fileBytes,
+        minHeight: 800,
+        minWidth: 600,
+        quality: 80, // adjust to hit ~1–1.5 MB
+        format: CompressFormat.jpeg,
+      );
+      // Replace fileBytes and update the file reference
+      fileBytes = compressedBytes;
+      final tempDir = await getTemporaryDirectory();
+      final compressedFile = File(
+        '${tempDir.path}/comp_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      );
+      await compressedFile.writeAsBytes(compressedBytes, flush: true);
+      file = compressedFile;
+    }
+
+    // STEP 2: Check file size
+    setState(() => _loadingStatus = 'Checking file size...');
+    if (fileSizeMB < 0.5) {
+      guidelines[ERROR_FILE_SIZE].hasError = true;
+    }
+
+    // STEP 3: Decode for dimensions (needed later for mapping and face size)
+    setState(() => _loadingStatus = 'Decoding image...');
+    final decoded = await decodeImageFromList(fileBytes);
     final Size pxSize =
         Size(decoded.width.toDouble(), decoded.height.toDouble());
 
+    // STEP 4: Run face detection
+    setState(() => _loadingStatus = 'Detecting face...');
     final inputImage = InputImage.fromFilePath(file.path);
-    List<Face> faces;
+    List<Face> faces = [];
     try {
       faces = await _faceDetector.processImage(inputImage);
     } catch (e) {
-      print("image processing failed : $e");
+      // Detection failed: keep suggestions as static and finish
       setState(() {
-        _status = 'Failed to run face detection. Please try another photo.';
-        _face = null;
+        _loadingStatus = null; // end loading
         _imageSize = pxSize;
+        _selectedImage = null;
+        _face = null;
       });
       return;
     }
+
+    // STEP 5: Validate face count
+    setState(() => _loadingStatus = 'Validating face count...');
     if (faces.isEmpty) {
+      guidelines[ERROR_SINGLE_FACE].hasError = true;
+      guidelines[ERROR_FACE_DIRECTION].hasError = true;
+    } else if (faces.length > 1) {
+      guidelines[ERROR_SINGLE_FACE].hasError = true;
+    }
+
+    // STEP 6: Validate landmarks, pose, and face size (only if exactly one face)
+    Face? detectedFace;
+    if (faces.length == 1) {
+      setState(() => _loadingStatus = 'Validating pose and visibility...');
+      final face = faces.first;
+      detectedFace = face;
+
+      final leftEye = face.landmarks[FaceLandmarkType.leftEye]?.position;
+      final rightEye = face.landmarks[FaceLandmarkType.rightEye]?.position;
+
+      if (leftEye == null || rightEye == null) {
+        guidelines[ERROR_FACE_DIRECTION].hasError = true;
+      }
+
+      final yaw = face.headEulerAngleY ?? 0.0;
+      final roll = face.headEulerAngleZ ?? 0.0;
+      if (yaw > 8 || yaw < -8 || roll > 8 || roll < -8) {
+        guidelines[ERROR_FACE_DIRECTION].hasError = true;
+      }
+
+      print(face.boundingBox.width);
+
+      if (face.boundingBox.width < 200 || face.boundingBox.height < 200) {
+        guidelines[ERROR_FACE_SIZE].hasError = true;
+      }
+    }
+
+    // STEP 7: Finalize based on aggregated validatable errors
+    setState(() => _loadingStatus = 'Finalizing...');
+    final bool hasAnyError =
+        guidelines.where((g) => g.isValidatable).any((g) => g.hasError);
+
+    if (!hasAnyError && detectedFace != null) {
       setState(() {
-        _status =
-            'Face not detected — use a clear, front-facing photo in good light.';
-        _face = null;
+        _loadingStatus = null; // clear loading
+        _face = detectedFace;
+        _selectedImage = file;
         _imageSize = pxSize;
       });
-      return;
-    }
-    if (faces.length > 1) {
+    } else {
       setState(() {
-        _status =
-            'Multiple faces detected — choose a photo with only one face.';
-        _face = null;
+        _loadingStatus = null; // clear loading
+        _selectedImage = null; // stay on landing card to show guideline errors
         _imageSize = pxSize;
+        _face = null;
       });
-      return;
     }
-
-    final face = faces.first;
-
-    final leftEye = face.landmarks[FaceLandmarkType.leftEye]?.position;
-    final rightEye = face.landmarks[FaceLandmarkType.rightEye]?.position;
-    final leftEar = face.landmarks[FaceLandmarkType.leftEar]?.position;
-    final rightEar = face.landmarks[FaceLandmarkType.rightEar]?.position;
-
-    final yaw = face.headEulerAngleY ?? 0.0;
-    final roll = face.headEulerAngleZ ?? 0.0;
-
-    String? message;
-    if (leftEye == null || rightEye == null) {
-      message = 'Eyes not clearly visible — face the camera directly.';
-    } else if (leftEar == null || rightEar == null) {
-      message = 'Only one ear visible — please look straight at the camera.';
-    } else if (yaw.abs() > 12 || roll.abs() > 12) {
-      message = 'Please face the camera directly with minimal tilt.';
-    } else if (face.boundingBox.width < 200 || face.boundingBox.height < 200) {
-      message = 'Move closer for a larger face in frame (better accuracy).';
-    }
-
-    setState(() {
-      _face = (message == null) ? face : null;
-      _selectedImage = file;
-      // _status = message ?? 'Perfect! Tap on a pair of glasses to try them on.';
-      _status = message;
-      _imageSize = pxSize;
-    });
   }
-
-  // Future<File> _reencodeUprightPng(List<int> bytes) async {
-  //   final codec = await instantiateImageCodec(bytes);
-  //   final frame = await codec.getNextFrame();
-  //   final uiImage = frame.image;
-  //   final bd = await uiImage.toByteData(format: ImageByteFormat.png);
-  //   final dir = await getTemporaryDirectory(); // path_provider
-  //   final out = File(
-  //       '${dir.path}/upright_${DateTime.now().millisecondsSinceEpoch}.png');
-  //   await out.writeAsBytes(bd!.buffer.asUint8List(), flush: true);
-  //   return out;
-  // }
 
   void _clearImage() {
     setState(() {
       _selectedImage = null;
       _selectedSpecsAsset = null;
-      _status = null;
+      _loadingStatus = null;
       _face = null;
       _imageSize = null;
     });
@@ -210,7 +282,19 @@ class _EyeGlassesVRState extends State<EyeGlassesArScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: ReusableAppBar(title: "Eye Glasses AR"),
+      appBar: AppBar(
+        // leading: IconButton(
+        //   onPressed: () {
+        //     context.pop();
+        //   },
+        //   icon: Icon(Icons.arrow_back, color: Colors.white),
+        // ),
+        title: Text(
+          'Eye Glasses AR',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: AppColors.PRIMARY,
+      ),
       body: _selectedImage == null
           ? _buildLandingCard(context)
           : _buildTryOn(context),
@@ -238,16 +322,30 @@ class _EyeGlassesVRState extends State<EyeGlassesArScreen> {
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
-                  const SizedBox(height: 12),
-                  _Guidelines(),
                   const SizedBox(height: 16),
-                  if (_status != null)
-                    Positioned(
-                      top: 12,
-                      left: 12,
-                      right: 12,
-                      child: Text(_status ?? ""),
+                  if (_loadingStatus != null && _loadingStatus!.isNotEmpty)
+                    Center(
+                      child: Column(
+                        children: [
+                          CircularProgressIndicator(
+                            color: AppColors.PRIMARY,
+                          ),
+                          Positioned(
+                            top: 12,
+                            left: 12,
+                            right: 12,
+                            child: Text(
+                              _loadingStatus ?? "",
+                              style: TextStyle(color: AppColors.PRIMARY),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                  const SizedBox(height: 12),
+                  _Guidelines(
+                    guidelines: guidelines,
+                  ),
                   const SizedBox(height: 16),
                   Material(
                     elevation: 2,
@@ -318,27 +416,49 @@ class _EyeGlassesVRState extends State<EyeGlassesArScreen> {
     return Column(
       children: [
         Expanded(child: LayoutBuilder(builder: (context, constraints) {
-          final displayW = constraints.maxWidth;
-          final displayH = constraints.maxHeight;
+// In _buildTryOn, inside LayoutBuilder:
+          final double viewportWidth = constraints.maxWidth;
+          final double viewportHeight = constraints.maxHeight;
 
-          final size = _imageSize;
-          double scale = 1, dx = 0, dy = 0;
-          if (size != null) {
-            final imgW = size.width;
-            final imgH = size.height;
-            final scaleW = displayW / imgW;
-            final scaleH = displayH / imgH;
-            scale = math.min(scaleW, scaleH);
-            final renderW = imgW * scale;
-            final renderH = imgH * scale;
-            dx = (displayW - renderW) / 2;
-            dy = (displayH - renderH) / 2;
+          final Size? originalImagePixelSize = _imageSize;
+
+// Scale from image pixels to on-screen pixels under BoxFit.contain
+          double scaleImageToViewport =
+              1.0; // multiply image pixels by this to get display pixels
+          double offsetViewportLeftPx =
+              0.0; // left gap in the viewport after fit
+          double offsetViewportTopPx = 0.0; // top gap in the viewport after fit
+
+          if (originalImagePixelSize != null) {
+            final double imagePxWidth = originalImagePixelSize.width;
+            final double imagePxHeight = originalImagePixelSize.height;
+
+            final double scaleToFitWidth = viewportWidth / imagePxWidth;
+            final double scaleToFitHeight = viewportHeight / imagePxHeight;
+
+            // BoxFit.contain picks the smaller scale
+            scaleImageToViewport = math.min(scaleToFitWidth, scaleToFitHeight);
+
+            final double renderedImageWidthPx =
+                imagePxWidth * scaleImageToViewport;
+            final double renderedImageHeightPx =
+                imagePxHeight * scaleImageToViewport;
+
+            // Center the rendered image in the viewport
+            offsetViewportLeftPx = (viewportWidth - renderedImageWidthPx) / 2.0;
+            offsetViewportTopPx =
+                (viewportHeight - renderedImageHeightPx) / 2.0;
           }
 
           _OverlayTransform? overlay;
-          if (_face != null && _imageSize != null) {
-            overlay =
-                _computeOverlayTransform(_face!, _imageSize!, scale, dx, dy);
+          if (_face != null && originalImagePixelSize != null) {
+            overlay = _computeOverlayTransform(
+              _face!,
+              originalImagePixelSize,
+              scaleImageToViewport,
+              offsetViewportLeftPx,
+              offsetViewportTopPx,
+            );
           }
 
           return Stack(
@@ -420,48 +540,85 @@ class _EyeGlassesVRState extends State<EyeGlassesArScreen> {
 
   _OverlayTransform? _computeOverlayTransform(
     Face face,
-    Size imageSize,
-    double scale,
-    double dx,
-    double dy,
+    Size
+        originalImagePixelSize, // image intrinsic pixel size reported by decodeImageFromList
+    double
+        scaleImageToViewport, // scale factor from image pixels to on-screen pixels (BoxFit.contain)
+    double
+        offsetViewportLeftPx, // left padding in viewport after fitting (display coords)
+    double
+        offsetViewportTopPx, // top padding in viewport after fitting (display coords)
   ) {
-    final leftEye = face.landmarks[FaceLandmarkType.leftEye]?.position;
-    final rightEye = face.landmarks[FaceLandmarkType.rightEye]?.position;
-    final leftEar = face.landmarks[FaceLandmarkType.leftEar]?.position;
-    final rightEar = face.landmarks[FaceLandmarkType.rightEar]?.position;
-    if (leftEye == null || rightEye == null) return null;
+    // Landmarks in image pixel coordinates (origin at top-left of image)
+    final leftEyePx = face.landmarks[FaceLandmarkType.leftEye]?.position;
+    final rightEyePx = face.landmarks[FaceLandmarkType.rightEye]?.position;
+    final leftEarPx = face.landmarks[FaceLandmarkType.leftEar]?.position;
+    final rightEarPx = face.landmarks[FaceLandmarkType.rightEar]?.position;
 
-    double widthPx;
-    if (leftEar != null && rightEar != null) {
-      widthPx = _dist(leftEar.x.toDouble(), leftEar.y.toDouble(),
-          rightEar.x.toDouble(), rightEar.y.toDouble());
+    // Need at least eyes for rotation and center
+    if (leftEyePx == null || rightEyePx == null) return null;
+
+    // 1) Desired overlay width in image pixels
+    // Prefer ear-to-ear span; fall back to eye distance * factor when ears are missing.
+    double overlayWidthImagePx;
+    if (leftEarPx != null && rightEarPx != null) {
+      overlayWidthImagePx = _dist(
+        leftEarPx.x.toDouble(),
+        leftEarPx.y.toDouble(),
+        rightEarPx.x.toDouble(),
+        rightEarPx.y.toDouble(),
+      );
     } else {
-      final eyeDist = _dist(leftEye.x.toDouble(), leftEye.y.toDouble(),
-          rightEye.x.toDouble(), rightEye.y.toDouble());
-      widthPx = eyeDist * 2.4; // estimate full face width based on eye distance
+      final double eyeDistanceImagePx = _dist(
+        leftEyePx.x.toDouble(),
+        leftEyePx.y.toDouble(),
+        rightEyePx.x.toDouble(),
+        rightEyePx.y.toDouble(),
+      );
+      overlayWidthImagePx =
+          eyeDistanceImagePx * 2.4; // tuned anthropometric fallback
     }
 
-    final angle = math.atan2(
-      (rightEye.y - leftEye.y).toDouble(),
-      (rightEye.x - leftEye.x).toDouble(),
+    // 2) Overlay rotation (radians) from the eye line
+    final double rotationRadians = math.atan2(
+      (rightEyePx.y - leftEyePx.y).toDouble(),
+      (rightEyePx.x - leftEyePx.x).toDouble(),
     );
 
-    final cxPx = (leftEye.x + rightEye.x) / 2.0;
-    final cyPx = (leftEye.y + rightEye.y) / 2.0;
-    final verticalOffsetPx = 0.12 * widthPx;
+    // 3) Anchor point in image pixels: midpoint of eyes
+    final double centerEyeImageX = (leftEyePx.x + rightEyePx.x) / 2.0;
+    final double centerEyeImageY = (leftEyePx.y + rightEyePx.y) / 2.0;
 
-    final widthDisplay = widthPx * scale;
-    final cxDisplay = cxPx * scale + dx;
-    final cyDisplay = cyPx * scale + dy + verticalOffsetPx * scale;
+    // 4) Vertical offset to place bridge above the eye midpoint (positive pushes downward)
+    // Use a fraction of overlay width so it scales naturally with face size.
+    final double bridgeOffsetImagePx =
+        0.1 * overlayWidthImagePx; // negative => move up slightly
 
-    final left = cxDisplay - widthDisplay / 2.0;
-    final top = cyDisplay - (widthDisplay * 0.25);
+    // 5) Convert image pixel coords to display (viewport) coords using scale and offsets
+    final double overlayWidthDisplayPx =
+        overlayWidthImagePx * scaleImageToViewport;
+
+    final double centerEyeDisplayX =
+        centerEyeImageX * scaleImageToViewport + offsetViewportLeftPx;
+    final double centerEyeDisplayY = centerEyeImageY * scaleImageToViewport +
+        offsetViewportTopPx +
+        bridgeOffsetImagePx * scaleImageToViewport;
+
+    // 6) Compute Positioned's top-left for an unrotated box whose center is at (centerEyeDisplayX, centerEyeDisplayY).
+    // Glasses PNG aspect varies; approximate height as a fraction of width for placement.
+    // Rotation is applied around the widget center by Transform.rotate, so we position by top-left = center - (w/2, h/2).
+    final double approximateOverlayHeightDisplayPx =
+        overlayWidthDisplayPx * 0.5;
+    final double overlayLeftDisplayPx =
+        centerEyeDisplayX - (overlayWidthDisplayPx / 2.0);
+    final double overlayTopDisplayPx =
+        centerEyeDisplayY - (approximateOverlayHeightDisplayPx / 2.0);
 
     return _OverlayTransform(
-      left: left,
-      top: top,
-      width: widthDisplay,
-      rotationRad: angle,
+      left: overlayLeftDisplayPx, // left position in viewport pixels
+      top: overlayTopDisplayPx, // top position in viewport pixels
+      width: overlayWidthDisplayPx, // overlay width in viewport pixels
+      rotationRad: rotationRadians, // rotation to align with the eye line
     );
   }
 
@@ -486,40 +643,58 @@ class _OverlayTransform {
 }
 
 class _Guidelines extends StatelessWidget {
+  final List<GuidelineItem> guidelines;
+
+  const _Guidelines({required this.guidelines});
+
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
-        Text('Face the camera directly with both eyes visible'),
-        Text('Use good, even lighting (avoid backlight)'),
-        Text('Remove existing glasses, hats, or masks'),
-        Text('Upload a high‑quality photo for better results'),
-        Text('Recommended aspect ratios: 1:1, 4:5, or 2:3'),
-      ],
+      children: guidelines
+          .map((guideline) => _GuidelineRow(
+                text: (guideline.isValidatable && guideline.hasError)
+                    ? guideline.guidelineError
+                    : guideline.guideline,
+                hasError: guideline.hasError,
+                isValidatable: guideline.isValidatable,
+              ))
+          .toList(),
     );
   }
 }
 
-// class _GuidelineRow extends StatelessWidget {
-//   final String text;
-//   const _GuidelineRow({required this.text});
+class _GuidelineRow extends StatelessWidget {
+  final String text;
+  final bool hasError;
+  final bool isValidatable;
 
-//   @override
-//   Widget build(BuildContext context) {
-//     return Padding(
-//       padding: const EdgeInsets.symmetric(vertical: 4),
-//       child: Row(
-//         crossAxisAlignment: CrossAxisAlignment.start,
-//         children: [
-//           const Icon(Icons.check_circle, color: Colors.green, size: 18),
-//           const SizedBox(width: 8),
-//           Expanded(child: Text(text)),
-//         ],
-//       ),
-//     );
-//   }
-// }
+  const _GuidelineRow({
+    required this.text,
+    required this.hasError,
+    required this.isValidatable,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (isValidatable)
+            Icon(
+              Icons.check_circle,
+              color: hasError ? Colors.red : Colors.green,
+              size: 18,
+            ),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text)),
+        ],
+      ),
+    );
+  }
+}
 
 class _SpecsChip extends StatelessWidget {
   final String label;
@@ -576,4 +751,18 @@ class _SpecsChip extends StatelessWidget {
       ),
     );
   }
+}
+
+class GuidelineItem {
+  final String guideline;
+  final String guidelineError;
+  final bool isValidatable;
+  bool hasError;
+
+  GuidelineItem({
+    required this.guideline,
+    required this.guidelineError,
+    required this.hasError,
+    required this.isValidatable,
+  });
 }

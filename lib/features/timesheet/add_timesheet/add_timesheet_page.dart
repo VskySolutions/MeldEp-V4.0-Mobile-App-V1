@@ -32,6 +32,7 @@ List<Map<String, String>> toItems(List<TimesheetDropdownValuesModel> src) {
       .map((r) => {
             'id': (r.id ?? '').toString(),
             'name': (r.name ?? '').toString(),
+            'description': (r.description ?? '').toString(),
           })
       .toList();
 }
@@ -163,7 +164,7 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
         for (int i = 0; i < lines.length; i++) {
           await _loadModuleOptionsForProject(i);
           await _loadTaskOptionsForModule(i);
-          await _loadActivityOptionsForTaskAndDate(i);
+          await _loadActivityOptionsForTask(i);
         }
       } else {
         throw Exception(
@@ -291,7 +292,7 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
   }
 
   /// Loads activities for the selected project+module+task and maps them into dropdown items.
-  Future<void> _loadActivityOptionsForTaskAndDate(int index) async {
+  Future<void> _loadActivityOptionsForTask(int index) async {
     final card = _timesheetCardsList[index];
     setState(() => card.isLoadingActivities = true);
 
@@ -323,9 +324,9 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
           project,
         ) {
           return TimesheetDropdownValuesModel(
-            id: project.id,
-            name: "${project.name} (${project.estimateHours})",
-          );
+              id: project.id,
+              name: "${project.name} (${project.estimateHours})",
+              description: project.description);
         }).toList();
       });
     } catch (e) {
@@ -880,6 +881,8 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
                                   selectedId: (card.projectId.isEmpty)
                                       ? null
                                       : card.projectId,
+                                  selectedValue: card.inputFieldsController
+                                      ?.projectDropdownController?.text,
                                   label: 'Project',
                                   errorText: card.projectError,
                                   suggestionsController: card.typeahead.project,
@@ -951,6 +954,8 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
                                   selectedId: (card.moduleId.isEmpty)
                                       ? null
                                       : card.moduleId,
+                                  selectedValue: card.inputFieldsController
+                                      ?.moduleDropdownController?.text,
                                   label: 'Module',
                                   errorText: card.moduleError,
                                   suggestionsController: card.typeahead.module,
@@ -1011,6 +1016,8 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
                                   selectedId: (card.taskId.isEmpty)
                                       ? null
                                       : card.taskId,
+                                  selectedValue: card.inputFieldsController
+                                      ?.TaskDropdownController?.text,
                                   label: 'Task',
                                   errorText: card.taskError,
                                   suggestionsController: card.typeahead.task,
@@ -1045,8 +1052,7 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
                                           (id ?? '').isNotEmpty;
                                     });
                                     if ((id ?? '').isNotEmpty) {
-                                      await _loadActivityOptionsForTaskAndDate(
-                                          index);
+                                      await _loadActivityOptionsForTask(index);
                                     }
                                     setState(
                                         () => card.isLoadingActivities = false);
@@ -1074,6 +1080,8 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
                                   selectedId: (card.activityId.isEmpty)
                                       ? null
                                       : card.activityId,
+                                  selectedValue: card.inputFieldsController
+                                      ?.activityDropdownController?.text,
                                   label: 'Activity (Est. Hrs)',
                                   errorText: card.activityError,
                                   suggestionsController:
@@ -1084,8 +1092,7 @@ class _AddTimesheetScreenState extends State<AddTimesheetScreen> {
                                         card.taskId.isNotEmpty) {
                                       setState(() =>
                                           card.isLoadingActivities = true);
-                                      await _loadActivityOptionsForTaskAndDate(
-                                          index);
+                                      await _loadActivityOptionsForTask(index);
                                       setState(() =>
                                           card.isLoadingActivities = false);
                                     }
@@ -1384,8 +1391,9 @@ class TimesheetCardsModel {
 class TimesheetDropdownValuesModel {
   String? id;
   String? name;
+  String? description;
 
-  TimesheetDropdownValuesModel({this.id, this.name});
+  TimesheetDropdownValuesModel({this.id, this.name, this.description});
 }
 
 class FieldControllerModel {
@@ -1499,11 +1507,13 @@ class TaskNamesModel {
 class ActivityNamesModel {
   final String id;
   final String name;
+  final String description;
   final double estimateHours;
 
   ActivityNamesModel({
     required this.id,
     required this.name,
+    required this.description,
     required this.estimateHours,
   });
 
@@ -1511,6 +1521,7 @@ class ActivityNamesModel {
     return ActivityNamesModel(
       id: json['id'] as String,
       name: json['name'] as String,
+      description: json['activityNameDescription'] as String,
       estimateHours: (json['estimateHours'] as num).toDouble(),
     );
   }

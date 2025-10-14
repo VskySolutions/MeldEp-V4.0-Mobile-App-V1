@@ -198,7 +198,7 @@ class BottomTabBarState extends State<BottomTabBar> {
                     icon: Icons.camera_alt_outlined,
                     label: 'AR',
                     onTap: () {
-                      context.go('/main/eyeGlassesAR');
+                      context.go('/eyeGlassesAR');
                       setState(() => _isMoreOpen = false);
                     },
                     isActive: isEyeGlassesArActive,

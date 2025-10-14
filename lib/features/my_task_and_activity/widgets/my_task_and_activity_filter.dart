@@ -207,7 +207,8 @@ class _TaskFilterPopupState extends State<TaskFilterPopup> {
 
       setState(() {
         activityNamesDropdown = fetchedActivityNames
-            .map((module) => {"id": module.id, "name": module.name})
+            .map((module) =>
+                {"id": module.id, "name": module.name, "description": module.description})
             .toList();
       });
     } catch (e) {
@@ -455,13 +456,16 @@ class EmployeeNamesModel {
 class ActivityNamesModel {
   final String id;
   final String name;
+  final String description;
 
-  ActivityNamesModel({required this.id, required this.name});
+  ActivityNamesModel(
+      {required this.id, required this.name, required this.description});
 
   factory ActivityNamesModel.fromJson(Map<String, dynamic> json) {
     return ActivityNamesModel(
       id: json['dropdownValue'] ?? '',
       name: json['dropdownValue'] ?? '',
+      description: json['description'] ?? '',
     );
   }
 }

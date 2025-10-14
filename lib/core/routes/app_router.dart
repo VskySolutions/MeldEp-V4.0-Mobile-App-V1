@@ -71,7 +71,13 @@ class AppRouter {
               final strDate = state.pathParameters['strDate']!;
               final endDate = state.pathParameters['endDate']!;
               final duration = state.pathParameters['duration']!;
-              return AddTimesheetLinesScreen(meetingUId: id, meetingSubject: subject, meetingStrDateTime: strDate, meetingEndDateTime: endDate, meetingDuration: duration,);
+              return AddTimesheetLinesScreen(
+                meetingUId: id,
+                meetingSubject: subject,
+                meetingStrDateTime: strDate,
+                meetingEndDateTime: endDate,
+                meetingDuration: duration,
+              );
             },
           ),
           GoRoute(
@@ -105,6 +111,12 @@ class AppRouter {
               final id = state.pathParameters['id']!;
               return MyTaskAndActivityNoteScreen(id: id);
             },
+          ),
+
+          GoRoute(
+            name: 'eyeGlassesAR',
+            path: '/eyeGlassesAR',
+            builder: (_, __) => const EyeGlassesArScreen(),
           ),
 
           // Bottom tabs shell
@@ -204,18 +216,18 @@ class AppRouter {
                 ],
               ),
 
-              StatefulShellBranch(
-                routes: [
-                  GoRoute(
-                    name: 'eyeGlassesAR',
-                    path: '/main/eyeGlassesAR',
-                    pageBuilder: (context, state) => NoTransitionPage(
-                      key: ValueKey('time_buddy-${state.uri.toString()}'),
-                      child: EyeGlassesArScreen(),
-                    ),
-                  ),
-                ],
-              ),
+              // StatefulShellBranch(
+              //   routes: [
+              //     GoRoute(
+              //       name: 'eyeGlassesAR',
+              //       path: '/eyeGlassesAR',
+              //       pageBuilder: (context, state) => NoTransitionPage(
+              //         key: ValueKey('eye-glasses-${state.uri.toString()}'),
+              //         child: EyeGlassesArScreen(),
+              //       ),
+              //     ),
+              //   ],
+              // ),
 
               // Profile tab root
               StatefulShellBranch(
