@@ -47,6 +47,30 @@ jobs:
             esac
           fi
 
+      - name: Generate .env files from secrets
+        shell: bash
+        run: |
+          mkdir -p config
+          # select API_BASE_URL based on flavor
+          if [[ "$FLAVOR" == "prod" ]]; then
+            API_BASE_URL=${{ secrets.API_BASE_URL_PROD }}
+          else
+            API_BASE_URL=${{ secrets.API_BASE_URL_DEV }}
+          fi
+          # write dev and uat
+          cat > config/.env.dev <<EOF
+          API_BASE_URL=$API_BASE_URL
+          VERSION=$VERSION_NAME
+          GITHUB_TOKEN=${{ secrets.TOKEN }}
+          EOF
+          cp config/.env.dev config/.env.uat
+          # write prod separately
+          cat > config/.env.prod <<EOF
+          API_BASE_URL=$API_BASE_URL
+          VERSION=$VERSION_NAME
+          GITHUB_TOKEN=${{ secrets.TOKEN }}
+          EOF
+
       - name: Flutter pub get
         run: flutter pub get
 

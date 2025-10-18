@@ -21,7 +21,7 @@ class _UpdateBannerDialogState extends State<UpdateBannerDialog> {
   String? notesHtml;
   String? downloadUrl;
   String? newVersion;
-  String? releseDate = "23/23/2332";
+  String? releseDate;
   bool shouldShow = false;
   int ignoreCount = 0;
   final int ignoreLimit = 5;

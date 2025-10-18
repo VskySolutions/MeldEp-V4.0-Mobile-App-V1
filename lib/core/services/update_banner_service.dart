@@ -10,7 +10,7 @@ class UpdateBannerService {
   final Map<String, String> _headers;
 
   UpdateBannerService({Dio? dio})
-      : _baseUrl = dotenv.env['GITHUB_API_BASE'] ??'',
+      : _baseUrl = dotenv.env['GITHUB_API_BASE'] ?? 'https://api.github.com/repos/VskySolutions/MeldEp-V4.0-Mobile-App-V1',
         _githubToken = dotenv.env['GITHUB_TOKEN'] ?? '',
         _dio = dio ?? Dio(),
         _headers = {
