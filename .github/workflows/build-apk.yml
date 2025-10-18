@@ -12,8 +12,8 @@ on:
         options: [dev, uat, prod]
 
 env:
-  VERSION_NAME: "1.0.2"  # Update this per release
-  STATIC_VERSION_NAME: "1.0.0" 
+  VERSION_NAME: "1.0.3"   # Update this per release
+  STATIC_VERSION_NAME: "1.0.0"
 
 jobs:
   build:
@@ -58,17 +58,23 @@ jobs:
           else
             API_BASE_URL=${{ secrets.API_BASE_URL_DEV }}
           fi
+          # set VERSION based on flavor
+          if [[ "$FLAVOR" == "dev" ]]; then
+            VERSION="$STATIC_VERSION_NAME"
+          else
+            VERSION="$VERSION_NAME"
+          fi
           # write dev and uat
           cat > config/.env.dev <<EOF
           API_BASE_URL=$API_BASE_URL
-          VERSION=$STATIC_VERSION_NAME
+          VERSION=$VERSION
           GITHUB_TOKEN=${{ secrets.TOKEN }}
           EOF
           cp config/.env.dev config/.env.uat
           # write prod separately
           cat > config/.env.prod <<EOF
           API_BASE_URL=$API_BASE_URL
-          VERSION=$VERSION_NAME
+          VERSION=$VERSION
           GITHUB_TOKEN=${{ secrets.TOKEN }}
           EOF
 
