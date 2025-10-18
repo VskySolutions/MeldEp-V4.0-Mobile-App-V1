@@ -12,6 +12,7 @@ import 'package:test_project/core/services/local_storage.dart';
 import 'package:test_project/core/theme/app_colors.dart';
 import 'package:test_project/core/utils/extensions.dart';
 import 'package:test_project/core/utils/validators.dart';
+import 'package:test_project/core/widgets/draggable_scrollable_sheet/show_task_detail_bottom_sheet.dart';
 import 'package:test_project/core/widgets/input_field/custom_rich_quill_value.dart';
 import 'package:test_project/core/widgets/input_field/custom_type_ahead_field.dart';
 import 'package:test_project/core/widgets/snackbar/custom_snackbar.dart';
@@ -1104,66 +1105,85 @@ class _AddTimesheetLinesScreenState extends State<AddTimesheetLinesScreen> {
                                   ),
                                   const SizedBox(height: 10),
                                   // ===================== TASK FIELD =====================
-                                  CustomTypeAheadField(
-                                    items: toItems(card.projectTaskDropdown),
-                                    selectedId: (card.taskId.isEmpty)
-                                        ? null
-                                        : card.taskId,
-                                    label: 'Task',
-                                    errorText: card.taskError,
-                                    suggestionsController: card.typeahead.task,
-                                    isLoading: card.isLoadingTasks,
-                                    onOpen: () async {
-                                      if (card.projectTaskDropdown.isEmpty &&
-                                          card.moduleId.isNotEmpty) {
-                                        setState(
-                                            () => card.isLoadingTasks = true);
-                                        await _loadTaskOptionsForModule(index);
-                                        setState(
-                                            () => card.isLoadingTasks = false);
-                                      }
-                                    },
-                                    onSelectedItem: (item) {
-                                      card
-                                          .inputFieldsController
-                                          ?.TaskDropdownController
-                                          ?.text = item?['name'] ?? '';
-                                    },
-                                    onChanged: (id) async {
-                                      setState(() {
-                                        card.taskId = id ?? '';
-                                        card.activityId = '';
-                                        card.projectActivityDropdown = [];
-                                        card.activityError = null;
-                                        card
-                                            .inputFieldsController
-                                            ?.activityDropdownController
-                                            ?.text = '';
-                                        card.isLoadingActivities =
-                                            (id ?? '').isNotEmpty;
-                                      });
-                                      if ((id ?? '').isNotEmpty) {
-                                        await _loadActivityOptionsForTask(
-                                            index);
-                                      }
-                                      setState(() =>
-                                          card.isLoadingActivities = false);
-                                      card.typeahead.activity.refresh();
-                                    },
-                                    onCleared: () {
-                                      setState(() {
-                                        card.taskId = '';
-                                        card.activityId = '';
-                                        card.projectActivityDropdown = [];
-                                        card.inputFieldsController
-                                            ?.TaskDropdownController?.text = '';
-                                        card
-                                            .inputFieldsController
-                                            ?.activityDropdownController
-                                            ?.text = '';
-                                      });
-                                      card.typeahead.activity.refresh();
-                                    },
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: CustomTypeAheadField(
+                                          items:
+                                              toItems(card.projectTaskDropdown),
+                                          selectedId: (card.taskId.isEmpty)
+                                              ? null
+                                              : card.taskId,
+                                          label: 'Task',
+                                          errorText: card.taskError,
+                                          suggestionsController:
+                                              card.typeahead.task,
+                                          isLoading: card.isLoadingTasks,
+                                          onOpen: () async {
+                                            if (card.projectTaskDropdown
+                                                    .isEmpty &&
+                                                card.moduleId.isNotEmpty) {
+                                              setState(() =>
+                                                  card.isLoadingTasks = true);
+                                              await _loadTaskOptionsForModule(
+                                                  index);
+                                              setState(() =>
+                                                  card.isLoadingTasks = false);
+                                            }
+                                          },
+                                          onSelectedItem: (item) {
+                                            card
+                                                .inputFieldsController
+                                                ?.TaskDropdownController
+                                                ?.text = item?['name'] ?? '';
+                                          },
+                                          onChanged: (id) async {
+                                            setState(() {
+                                              card.taskId = id ?? '';
+                                              card.activityId = '';
+                                              card.projectActivityDropdown = [];
+                                              card.activityError = null;
+                                              card
+                                                  .inputFieldsController
+                                                  ?.activityDropdownController
+                                                  ?.text = '';
+                                              card.isLoadingActivities =
+                                                  (id ?? '').isNotEmpty;
+                                            });
+                                            if ((id ?? '').isNotEmpty) {
+                                              await _loadActivityOptionsForTask(
+                                                  index);
+                                            }
+                                            setState(() => card
+                                                .isLoadingActivities = false);
+                                            card.typeahead.activity.refresh();
+                                          },
+                                          onCleared: () {
+                                            setState(() {
+                                              card.taskId = '';
+                                              card.activityId = '';
+                                              card.projectActivityDropdown = [];
+                                              card
+                                                  .inputFieldsController
+                                                  ?.TaskDropdownController
+                                                  ?.text = '';
+                                              card
+                                                  .inputFieldsController
+                                                  ?.activityDropdownController
+                                                  ?.text = '';
+                                            });
+                                            card.typeahead.activity.refresh();
+                                          },
+                                        ),
+                                      ),
+                                      if (card.taskId.isNotEmpty)
+                                        IconButton(
+                                            onPressed: () =>
+                                                showTaskDetailBottomSheet(
+                                                    context,
+                                                    id: card.taskId),
+                                            icon: Icon(Icons.copy))
+                                    ],
                                   ),
                                   const SizedBox(height: 10),
                                   // ===================== ACTIVITY FIELD =====================

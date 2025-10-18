@@ -66,6 +66,7 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
   String? _searchActivityStatusId;
   String? _searchTaskStatusId;
   String? _searchActiveStatus = 'Active';
+  DateTime? _searchSprintWeekEndDate;
   DateTime? _searchTargetMonth;
 
   // Static Search
@@ -144,6 +145,10 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
           _searchProjectModuleId != null ? [_searchProjectModuleId] : [],
       "searchText": searchText,
       "sortBy": "project.name",
+      "sorts": {},
+      "sprintWeekEndDate": _searchSprintWeekEndDate != null
+          ? _searchSprintWeekEndDate!.format()
+          : null,
       "statusIds": _searchTaskStatusId != null ? [_searchTaskStatusId] : [],
     };
 
@@ -367,6 +372,7 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
           initialTaskStatusId: _searchTaskStatusId,
           initialActiveStatus: _searchActiveStatus,
           initialTargetMonth: _searchTargetMonth,
+          initialSprintWeekEndDateDate: _searchSprintWeekEndDate,
           onApplyFilter: (
             newVal1,
             newVal2,
@@ -376,6 +382,7 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
             newVal6,
             newVal7,
             newVal8,
+            newVal9,
           ) {
             setState(() {
               _searchProjectId = newVal1;
@@ -386,6 +393,7 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
               _searchTaskStatusId = newVal6;
               _searchActiveStatus = newVal7;
               _searchTargetMonth = newVal8;
+              _searchSprintWeekEndDate = newVal9;
               _currentPage = 1;
               _hasMore = true;
               _selectedIds.clear();
@@ -416,6 +424,8 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
           () => setState(() => _searchActiveStatus = null)),
       _FilterData('Target Month', _searchTargetMonth,
           () => setState(() => _searchTargetMonth = null)),
+      _FilterData('Sprint Week End Date', _searchSprintWeekEndDate,
+          () => setState(() => _searchSprintWeekEndDate = null)),
     ];
 
     return filters
@@ -718,6 +728,15 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
                                           : (task.task?.status?.dropDownValue ??
                                               '--'));
 
+                                  final sprintWeekEndDate = task.task
+                                      .projectWeeklyPlanDatesReqTaskIssueMappingList
+                                      .map((mapping) => mapping
+                                          .projectWeeklyPlanDates.weekDate)
+                                      .where((weekDate) =>
+                                          weekDate != null &&
+                                          weekDate.isNotEmpty)
+                                      .join(',');
+
                                   return Card(
                                     elevation: 4,
                                     margin: const EdgeInsets.symmetric(
@@ -949,103 +968,133 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
                                               horizontal: 10,
                                               vertical: 4,
                                             ),
-                                            child: Row(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
+                                            child: Column(
                                               children: [
-                                                Expanded(
-                                                  child: Wrap(
-                                                    crossAxisAlignment:
-                                                        WrapCrossAlignment
-                                                            .center,
-                                                    spacing: 4,
-                                                    runSpacing: 4,
-                                                    children: [
-                                                      // if (disableOpen ||
-                                                      //     currentName
-                                                      //             .toLowerCase() !=
-                                                      //         'open')
-                                                      //   Icon(Icons.circle,
-                                                      //       color:
-                                                      //           AppColors.ERROR,
-                                                      //       size: 18),
-                                                      // projectName (inline fallback)
-                                                      Text(
-                                                        task.projectName
-                                                                .isNotEmpty
-                                                            ? task.projectName
-                                                            : (task.project
-                                                                    ?.name ??
-                                                                ''),
-                                                        style: const TextStyle(
-                                                            fontWeight:
-                                                                FontWeight
-                                                                    .bold),
-                                                      ),
-                                                      Icon(Icons.double_arrow,
-                                                          color:
-                                                              Colors.grey[600],
-                                                          size: 18),
-                                                      // projectModuleName (inline fallback)
-                                                      if ((task.projectModuleName
-                                                                  ?.isNotEmpty ??
-                                                              false) ||
-                                                          (task
-                                                                  .projectModule
-                                                                  ?.name
-                                                                  ?.isNotEmpty ??
-                                                              false))
-                                                        Text(
-                                                          (task.projectModuleName
-                                                                      ?.isNotEmpty ==
-                                                                  true)
-                                                              ? task
-                                                                  .projectModuleName!
-                                                              : (task.projectModule
-                                                                      ?.name ??
-                                                                  ''),
-                                                        ),
-                                                      Icon(Icons.double_arrow,
-                                                          color:
-                                                              Colors.grey[600],
-                                                          size: 18),
-                                                      // taskName (inline fallback)
-                                                      Text(task.taskName
-                                                              .isNotEmpty
-                                                          ? task.taskName
-                                                          : (task.task?.name ??
-                                                              '')),
-                                                      // activity name (top-level 'name' field)
-                                                      if (task.name.isNotEmpty)
-                                                        Text('(${task.name})',
+                                                Row(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Expanded(
+                                                      child: Wrap(
+                                                        crossAxisAlignment:
+                                                            WrapCrossAlignment
+                                                                .center,
+                                                        spacing: 4,
+                                                        runSpacing: 4,
+                                                        children: [
+                                                          Text(
+                                                            task.projectName
+                                                                    .isNotEmpty
+                                                                ? task
+                                                                    .projectName
+                                                                : (task.project
+                                                                        ?.name ??
+                                                                    ''),
                                                             style: const TextStyle(
                                                                 fontWeight:
                                                                     FontWeight
-                                                                        .bold)),
-                                                      Tooltip(
-                                                        message: activityNameDescription
-                                                                .isNotEmpty
-                                                            ? activityNameDescription
-                                                            : 'No description',
-                                                        preferBelow: true,
-                                                        child: GestureDetector(
-                                                          onTap: () =>
-                                                              Fluttertoast
-                                                                  .showToast(
-                                                            msg:
-                                                                "Press and hold to view activity description",
+                                                                        .bold),
                                                           ),
-                                                          child: Icon(
+                                                          Icon(
                                                               Icons
-                                                                  .info_outline,
-                                                              size: 18,
+                                                                  .double_arrow,
                                                               color: Colors
-                                                                  .grey[800]),
-                                                        ),
+                                                                  .grey[600],
+                                                              size: 18),
+                                                          // projectModuleName (inline fallback)
+                                                          if ((task.projectModuleName
+                                                                      ?.isNotEmpty ??
+                                                                  false) ||
+                                                              (task
+                                                                      .projectModule
+                                                                      ?.name
+                                                                      ?.isNotEmpty ??
+                                                                  false))
+                                                            Text(
+                                                              (task.projectModuleName
+                                                                          ?.isNotEmpty ==
+                                                                      true)
+                                                                  ? task
+                                                                      .projectModuleName!
+                                                                  : (task.projectModule
+                                                                          ?.name ??
+                                                                      ''),
+                                                            ),
+                                                          Icon(
+                                                              Icons
+                                                                  .double_arrow,
+                                                              color: Colors
+                                                                  .grey[600],
+                                                              size: 18),
+                                                          // taskName (inline fallback)
+                                                          Text(task.taskName
+                                                                  .isNotEmpty
+                                                              ? task.taskName
+                                                              : (task.task
+                                                                      ?.name ??
+                                                                  '')),
+                                                          // activity name (top-level 'name' field)
+                                                          if (task
+                                                              .name.isNotEmpty)
+                                                            Text(
+                                                                '(${task.name})',
+                                                                style: const TextStyle(
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold)),
+                                                          Tooltip(
+                                                            message: activityNameDescription
+                                                                    .isNotEmpty
+                                                                ? activityNameDescription
+                                                                : 'No description',
+                                                            preferBelow: true,
+                                                            child:
+                                                                GestureDetector(
+                                                              onTap: () =>
+                                                                  Fluttertoast
+                                                                      .showToast(
+                                                                msg:
+                                                                    "Press and hold to view activity description",
+                                                              ),
+                                                              child: Icon(
+                                                                  Icons
+                                                                      .info_outline,
+                                                                  size: 18,
+                                                                  color: Colors
+                                                                          .grey[
+                                                                      800]),
+                                                            ),
+                                                          ),
+                                                        ],
                                                       ),
-                                                    ],
-                                                  ),
+                                                    ),
+                                                  ],
                                                 ),
+                                                if (sprintWeekEndDate
+                                                    .isNotEmpty)
+                                                  Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment.start,
+                                                    children: [
+                                                      Expanded(
+                                                          child: Wrap(
+                                                              crossAxisAlignment:
+                                                                  WrapCrossAlignment
+                                                                      .center,
+                                                              spacing: 4,
+                                                              runSpacing: 4,
+                                                              children: [
+                                                            Text(
+                                                              "Week:",
+                                                              style: TextStyle(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold),
+                                                            ),
+                                                            Text(sprintWeekEndDate),
+                                                          ]))
+                                                    ],
+                                                  )
                                               ],
                                             ),
                                           ),
@@ -1228,77 +1277,6 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
                   ),
               ],
             ),
-    );
-  }
-
-  Widget _buildActivityStatusDropdown({
-    required ProjectActivityListItem task,
-    required List<Map<String, String>> items,
-    required ValueChanged<String> onChanged,
-  }) {
-    // Current selection from the task (may be absent from items)
-    final String? selectedId = task.activityStatus?.id?.isNotEmpty == true
-        ? task.activityStatus!.id
-        : null;
-
-    // Identify the "Open" option and whether it must be disabled
-    final Map<String, String>? openOpt = items.firstWhere(
-        (m) => (m['name'] ?? '').toLowerCase() == 'open',
-        orElse: () => {});
-    final String? openId = openOpt != null ? openOpt['id'] : null;
-    final bool disableOpen = (task.description.isEmpty);
-
-    // Only keep values that exist in the dropdown list
-    final bool selectedExistsInList =
-        selectedId != null && items.any((m) => m['id'] == selectedId);
-    final String? effectiveValue = selectedExistsInList ? selectedId : null;
-
-    // Basic pill styling
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColors.PRIMARY),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          isDense: true,
-          value: effectiveValue,
-          // Show name text even when value is null (no match) via hint
-          hint: Text(
-            (task.activityStatus?.dropDownValue?.isNotEmpty == true)
-                ? task.activityStatus!.dropDownValue
-                : (task.task?.status?.dropDownValue ?? '--'),
-            style: const TextStyle(fontSize: 12),
-          ),
-          icon: const Icon(Icons.keyboard_arrow_down),
-          items: items.map((m) {
-            final String id = m['id'] ?? '';
-            final String name = m['name'] ?? '';
-            final bool isOpen = openId != null && id == openId;
-            final bool isDisabled = isOpen && disableOpen;
-
-            return DropdownMenuItem<String>(
-              value: id,
-              enabled: !isDisabled,
-              child: Text(
-                name,
-                style: TextStyle(
-                  fontSize: 12,
-                  color:
-                      isDisabled ? Colors.grey.withOpacity(0.6) : Colors.black,
-                ),
-              ),
-            );
-          }).toList(),
-          onChanged: (newId) {
-            if (newId == null) return;
-            // Guard: prevent selecting "Open" when description is empty
-            if (disableOpen && newId == openId) return;
-            onChanged(newId); // Return the selected id
-          },
-        ),
-      ),
     );
   }
 }

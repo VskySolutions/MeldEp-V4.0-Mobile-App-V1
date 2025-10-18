@@ -17,7 +17,8 @@ class TaskAndActivityDetailsModel {
     return TaskAndActivityDetailsModel(
       editing: json['editing'] ?? false,
       data: (json['data'] as List<dynamic>?)
-              ?.map((e) => ProjectActivityListItem.fromJson(e as Map<String, dynamic>))
+              ?.map((e) =>
+                  ProjectActivityListItem.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
       total: json['total'] ?? 0,
@@ -121,7 +122,8 @@ class ProjectActivityListItem {
       project: Project.fromJson(json['project'] ?? const {}),
       task: Task.fromJson(json['task'] ?? const {}),
       projectModule: ProjectModule.fromJson(json['projectModule'] ?? const {}),
-      activityStatus: ActivityStatus.fromJson(json['activityStatus'] ?? const {}),
+      activityStatus:
+          ActivityStatus.fromJson(json['activityStatus'] ?? const {}),
       createdOnUtc: json['createdOnUtc'] ?? '',
       projectActivities:
           List<dynamic>.from(json['projectActivities'] ?? const []),
@@ -129,8 +131,8 @@ class ProjectActivityListItem {
           List<dynamic>.from(json['projectActivityLines'] ?? const []),
       projectEmployeeMappings:
           List<dynamic>.from(json['projectEmployeeMappings'] ?? const []),
-      projectTaskActivityFilesList: List<dynamic>.from(
-          json['projectTaskActivityFilesList'] ?? const []),
+      projectTaskActivityFilesList:
+          List<dynamic>.from(json['projectTaskActivityFilesList'] ?? const []),
       projectTasks: List<dynamic>.from(json['projectTasks'] ?? const []),
       storyBoards: List<dynamic>.from(json['storyBoards'] ?? const []),
       id: json['id'] ?? '',
@@ -428,8 +430,9 @@ class Project {
       createdOnUtc: json['createdOnUtc'] ?? '',
       deleted: json['deleted'] ?? false,
       isCharter: json['isCharter'] ?? false,
-      projectStatus:
-          json['projectStatus'] != null ? Status.fromJson(json['projectStatus']) : null,
+      projectStatus: json['projectStatus'] != null
+          ? Status.fromJson(json['projectStatus'])
+          : null,
       projectActivities:
           List<dynamic>.from(json['projectActivities'] ?? const []),
       projectEmployeeMappings:
@@ -530,7 +533,8 @@ class Task {
   final List<dynamic> projectTaskFilesList;
   final List<dynamic> projectTaskTags;
   final List<dynamic> projectTaskRelatedMappings;
-  final List<dynamic> projectWeeklyPlanDatesReqTaskIssueMappingList;
+  final List<ProjectWeeklyPlanDatesReqTaskIssueMapping>
+      projectWeeklyPlanDatesReqTaskIssueMappingList;
   final String id;
   final Map<String, dynamic> customProperties;
 
@@ -598,12 +602,18 @@ class Task {
           List<dynamic>.from(json['projectTaskStatusLog'] ?? const []),
       projectTaskFilesList:
           List<dynamic>.from(json['projectTaskFilesList'] ?? const []),
-      projectTaskTags:
-          List<dynamic>.from(json['projectTask_Tags'] ?? const []),
-      projectTaskRelatedMappings: List<dynamic>.from(
-          json['projectTaskRelatedMappings'] ?? const []),
-      projectWeeklyPlanDatesReqTaskIssueMappingList: List<dynamic>.from(
-          json['projectWeeklyPlanDatesReqTaskIssueMappingList'] ?? const []),
+      projectTaskTags: List<dynamic>.from(json['projectTask_Tags'] ?? const []),
+      projectTaskRelatedMappings:
+          List<dynamic>.from(json['projectTaskRelatedMappings'] ?? const []),
+      // projectWeeklyPlanDatesReqTaskIssueMappingList: ProjectWeeklyPlanDatesReqTaskIssueMappingList.fromJson(
+      //     json['projectWeeklyPlanDatesReqTaskIssueMappingList'] ?? const []),
+      projectWeeklyPlanDatesReqTaskIssueMappingList:
+          (json['projectWeeklyPlanDatesReqTaskIssueMappingList']
+                      as List<dynamic>? ??
+                  [])
+              .map((e) => ProjectWeeklyPlanDatesReqTaskIssueMapping.fromJson(
+                  e as Map<String, dynamic>))
+              .toList(),
       id: json['id'] ?? '',
       customProperties:
           Map<String, dynamic>.from(json['customProperties'] ?? const {}),
@@ -638,9 +648,136 @@ class Task {
         'projectTaskFilesList': projectTaskFilesList,
         'projectTask_Tags': projectTaskTags,
         'projectTaskRelatedMappings': projectTaskRelatedMappings,
-        'projectWeeklyPlanDatesReqTaskIssueMappingList': projectWeeklyPlanDatesReqTaskIssueMappingList,
+        'projectWeeklyPlanDatesReqTaskIssueMappingList':
+            projectWeeklyPlanDatesReqTaskIssueMappingList,
         'id': id,
         'customProperties': customProperties,
+      };
+}
+
+class ProjectWeeklyPlanDatesReqTaskIssueMappingList {
+  final List<ProjectWeeklyPlanDatesReqTaskIssueMapping>
+      projectWeeklyPlanDatesReqTaskIssueMappingList;
+
+  ProjectWeeklyPlanDatesReqTaskIssueMappingList({
+    required this.projectWeeklyPlanDatesReqTaskIssueMappingList,
+  });
+
+  factory ProjectWeeklyPlanDatesReqTaskIssueMappingList.fromJson(
+      Map<String, dynamic> json) {
+    return ProjectWeeklyPlanDatesReqTaskIssueMappingList(
+      projectWeeklyPlanDatesReqTaskIssueMappingList:
+          (json['projectWeeklyPlanDatesReqTaskIssueMappingList']
+                      as List<dynamic>? ??
+                  [])
+              .map((e) => ProjectWeeklyPlanDatesReqTaskIssueMapping.fromJson(
+                  e as Map<String, dynamic>))
+              .toList(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'projectWeeklyPlanDatesReqTaskIssueMappingList':
+            projectWeeklyPlanDatesReqTaskIssueMappingList
+                .map((e) => e.toJson())
+                .toList(),
+      };
+}
+
+class ProjectWeeklyPlanDatesReqTaskIssueMapping {
+  final String createdOnUtc;
+  final bool deleted;
+  final ProjectWeeklyPlanDates projectWeeklyPlanDates;
+  final String id;
+
+  ProjectWeeklyPlanDatesReqTaskIssueMapping({
+    required this.createdOnUtc,
+    required this.deleted,
+    required this.projectWeeklyPlanDates,
+    required this.id,
+  });
+
+  factory ProjectWeeklyPlanDatesReqTaskIssueMapping.fromJson(
+      Map<String, dynamic> json) {
+    return ProjectWeeklyPlanDatesReqTaskIssueMapping(
+      createdOnUtc: json['createdOnUtc'] as String? ?? '',
+      deleted: json['deleted'] as bool? ?? false,
+      projectWeeklyPlanDates: ProjectWeeklyPlanDates.fromJson(
+          json['projectWeeklyPlanDates'] as Map<String, dynamic>? ?? {}),
+      id: json['id'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'createdOnUtc': createdOnUtc,
+        'deleted': deleted,
+        'projectWeeklyPlanDates': projectWeeklyPlanDates.toJson(),
+        'id': id,
+      };
+}
+
+class ProjectWeeklyPlanDates {
+  final String weekDate;
+  final bool isApproved;
+  final bool isCompleted;
+  final int completionPercentage;
+  final String createdOnUtc;
+  final String updatedOnUtc;
+  final bool deleted;
+  final List<dynamic> projectWeeklyPlanDatesLines;
+  final List<dynamic> projectWeeklyPlanDatesReqTaskIssueMapping;
+  final List<dynamic> employeeEstimateHoursForWeekSummaryList;
+  final String id;
+
+  ProjectWeeklyPlanDates({
+    required this.weekDate,
+    required this.isApproved,
+    required this.isCompleted,
+    required this.completionPercentage,
+    required this.createdOnUtc,
+    required this.updatedOnUtc,
+    required this.deleted,
+    required this.projectWeeklyPlanDatesLines,
+    required this.projectWeeklyPlanDatesReqTaskIssueMapping,
+    required this.employeeEstimateHoursForWeekSummaryList,
+    required this.id,
+  });
+
+  factory ProjectWeeklyPlanDates.fromJson(Map<String, dynamic> json) {
+    return ProjectWeeklyPlanDates(
+      weekDate: json['weekDate'] as String? ?? '',
+      isApproved: json['isApproved'] as bool? ?? false,
+      isCompleted: json['isCompleted'] as bool? ?? false,
+      completionPercentage: json['completionPercentage'] as int? ?? 0,
+      createdOnUtc: json['createdOnUtc'] as String? ?? '',
+      updatedOnUtc: json['updatedOnUtc'] as String? ?? '',
+      deleted: json['deleted'] as bool? ?? false,
+      projectWeeklyPlanDatesLines:
+          json['projectWeeklyPlanDatesLines'] as List<dynamic>? ?? [],
+      projectWeeklyPlanDatesReqTaskIssueMapping:
+          json['projectWeeklyPlanDatesReqTaskIssueMapping'] as List<dynamic>? ??
+              [],
+      employeeEstimateHoursForWeekSummaryList:
+          json['employeeEstimateHoursForWeekSummaryList'] as List<dynamic>? ??
+              [],
+      id: json['id'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'weekDate': weekDate,
+        'isApproved': isApproved,
+        'isCompleted': isCompleted,
+        'completionPercentage': completionPercentage,
+        'createdOnUtc': createdOnUtc,
+        'updatedOnUtc': updatedOnUtc,
+        'deleted': deleted,
+        'projectWeeklyPlanDatesLines': projectWeeklyPlanDatesLines,
+        'projectWeeklyPlanDatesReqTaskIssueMapping':
+            projectWeeklyPlanDatesReqTaskIssueMapping,
+        'employeeEstimateHoursForWeekSummaryList':
+            employeeEstimateHoursForWeekSummaryList,
+        'id': id,
       };
 }
 
@@ -738,7 +875,8 @@ class ProjectModule {
       projectTasks: List<dynamic>.from(json['projectTasks'] ?? const []),
       projectModuleDocumentModel:
           List<dynamic>.from(json['projectModuleDocumentModel'] ?? const []),
-      projectTaskModel: List<dynamic>.from(json['projectTaskModel'] ?? const []),
+      projectTaskModel:
+          List<dynamic>.from(json['projectTaskModel'] ?? const []),
       projectModuleFilesList:
           List<dynamic>.from(json['projectModuleFilesList'] ?? const []),
       id: json['id'] ?? '',
@@ -955,7 +1093,8 @@ class PersonWithFullName {
 
 // Convenience helpers
 TaskAndActivityDetailsModel TaskAndActivityDetailsModelFromJson(String str) =>
-    TaskAndActivityDetailsModel.fromJson(json.decode(str) as Map<String, dynamic>);
+    TaskAndActivityDetailsModel.fromJson(
+        json.decode(str) as Map<String, dynamic>);
 
 String TaskAndActivityDetailsModelToJson(TaskAndActivityDetailsModel data) =>
     json.encode(data.toJson());

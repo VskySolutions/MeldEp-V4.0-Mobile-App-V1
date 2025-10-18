@@ -1,15 +1,11 @@
 import 'dart:io';
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'dart:typed_data';
 import 'dart:math' as math;
-import 'package:flutter/rendering.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:test_project/core/theme/app_colors.dart';
-import 'package:test_project/core/widgets/reusable_app_bar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 
@@ -27,6 +23,9 @@ class _EyeGlassesVRState extends State<EyeGlassesArScreen> {
   Face? _face;
   Size? _imageSize;
   late final FaceDetector _faceDetector;
+
+  File? _awaitingCropImage;
+  bool _allowCrop = false;
 
 // Replace your entire guidelines list with this:
   List<GuidelineItem> guidelines = [
@@ -135,6 +134,8 @@ class _EyeGlassesVRState extends State<EyeGlassesArScreen> {
   }
 
   Future<void> _processPickedImage(File file) async {
+    final File originalFile = file;
+
     // Initialize state and reset only validatable guideline errors
     setState(() {
       _selectedSpecsAsset = null;
@@ -214,6 +215,8 @@ class _EyeGlassesVRState extends State<EyeGlassesArScreen> {
       guidelines[ERROR_FACE_DIRECTION].hasError = true;
     } else if (faces.length > 1) {
       guidelines[ERROR_SINGLE_FACE].hasError = true;
+      _allowCrop = true;
+      _awaitingCropImage = originalFile;
     }
 
     // STEP 6: Validate landmarks, pose, and face size (only if exactly one face)
@@ -240,6 +243,8 @@ class _EyeGlassesVRState extends State<EyeGlassesArScreen> {
 
       if (face.boundingBox.width < 200 || face.boundingBox.height < 200) {
         guidelines[ERROR_FACE_SIZE].hasError = true;
+        _allowCrop = true;
+        _awaitingCropImage = originalFile;
       }
     }
 
@@ -279,6 +284,40 @@ class _EyeGlassesVRState extends State<EyeGlassesArScreen> {
     setState(() => _selectedSpecsAsset = assetPath);
   }
 
+  Future<void> _onCropPressed() async {
+    final croppedFile = await ImageCropper().cropImage(
+        sourcePath: _awaitingCropImage!.path,
+        compressFormat: ImageCompressFormat.jpg,
+        compressQuality: 100,
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: "Crop Image",
+            toolbarColor: AppColors.PRIMARY,
+            toolbarWidgetColor: Colors.white,
+            initAspectRatio: CropAspectRatioPreset.original,
+            lockAspectRatio: false,
+            aspectRatioPresets: [
+              CropAspectRatioPreset.original,
+              CropAspectRatioPreset.square,
+            ],
+          ),
+          IOSUiSettings(
+            title: 'Cropper',
+            aspectRatioPresets: [
+              CropAspectRatioPreset.original,
+              CropAspectRatioPreset.square,
+            ],
+          ),
+        ]);
+    if (croppedFile != null) {
+      setState(() {
+        _awaitingCropImage = null;
+        _allowCrop = false;
+      });
+      await _processPickedImage(File(croppedFile.path));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -296,14 +335,16 @@ class _EyeGlassesVRState extends State<EyeGlassesArScreen> {
         backgroundColor: AppColors.PRIMARY,
       ),
       body: _selectedImage == null
-          ? _buildLandingCard(context)
+          ? Center(
+              child: _buildLandingCard(context),
+            )
           : _buildTryOn(context),
     );
   }
 
   // Landing card with guidance and capsule button
   Widget _buildLandingCard(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Center(
         child: ConstrainedBox(
@@ -347,6 +388,22 @@ class _EyeGlassesVRState extends State<EyeGlassesArScreen> {
                     guidelines: guidelines,
                   ),
                   const SizedBox(height: 16),
+                  if (_allowCrop)
+                    Column(
+                      children: [
+                        Container(
+                          constraints: BoxConstraints(maxHeight: 300),
+                          child: Image.file(_awaitingCropImage!),
+                        ),
+                        const SizedBox(height: 8),
+                        ElevatedButton.icon(
+                          icon: Icon(Icons.crop),
+                          label: Text('Crop Image'),
+                          onPressed: _onCropPressed,
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    ),
                   Material(
                     elevation: 2,
                     borderRadius: BorderRadius.circular(24),

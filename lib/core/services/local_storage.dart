@@ -1,5 +1,4 @@
 import 'package:shared_preferences/shared_preferences.dart';
-
 import '../constants/storage_keys.dart';
 
 class LocalStorage {
@@ -161,6 +160,19 @@ class LocalStorage {
     await prefs.remove(StorageKeys.ACTIVITY_NAME_TIMER);
     await prefs.remove(StorageKeys.ACTIVITY_TIMER_TIMESTAMP);
   }
+
+    // Update Banner Ignore Count
+  static Future<int> getUpdateIgnoreCount() =>
+      _prefs().then((p) => p.getInt(StorageKeys.UPDATE_IGNORE_COUNT) ?? 0);
+
+  static Future<bool> incrementUpdateIgnoreCount() async {
+    final prefs = await _prefs();
+    final currentCount = prefs.getInt(StorageKeys.UPDATE_IGNORE_COUNT) ?? 0;
+    return prefs.setInt(StorageKeys.UPDATE_IGNORE_COUNT, currentCount + 1);
+  }
+
+  static Future<bool> clearUpdateIgnoreCount() =>
+      _prefs().then((p) => p.remove(StorageKeys.UPDATE_IGNORE_COUNT));
 }
 
 

@@ -98,7 +98,7 @@ class _TimesheetFilterPopupState extends State<TimesheetFilterPopup> {
 
   // Map incoming initial values to local selected state
   void _initializeValues() {
-    _selectedCreatedBy = widget.initialCreatedBy ?? 'Created By Me';
+    _selectedCreatedBy = widget.initialCreatedBy;
     _selectedEmployeeId = widget.initialEmployeeId;
     _selectedProjectId = widget.initialProjectId;
     _selectedModuleId = widget.initialModuleId;

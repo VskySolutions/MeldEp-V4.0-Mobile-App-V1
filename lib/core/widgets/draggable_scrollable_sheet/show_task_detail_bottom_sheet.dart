@@ -3,8 +3,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_html/flutter_html.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:html/parser.dart' as html_parser;
+import 'package:http/http.dart';
 import 'package:test_project/core/theme/app_colors.dart';
+import 'package:test_project/core/widgets/custom_snackbar.dart';
 import 'package:test_project/features/my_task_and_activity/my_task_and_activity_service.dart';
 
 Future<void> showTaskDetailBottomSheet(
@@ -30,7 +33,6 @@ class _TaskDetailSheet extends StatefulWidget {
 class _TaskDetailSheetState extends State<_TaskDetailSheet> {
   late Future<String> _futureHtml;
 
-
   @override
   void initState() {
     super.initState();
@@ -41,10 +43,14 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> {
     const fallback = 'No Description available';
     if (id.trim().isEmpty) return fallback;
     try {
-      final Map<String, dynamic> map = (await MyTaskAndActivityService.instance
-          .fetchTaskDescriptionById(id)) as Map<String, dynamic>;
-      final desc = (map['description'] as String?)?.trim();
-      return (desc == null || desc.isEmpty) ? fallback : desc;
+      final response =
+          await MyTaskAndActivityService.instance.fetchTaskDescriptionById(id);
+      if (response.statusCode == 200) {
+        final map = response.data;
+        final desc = map['description'];
+        return (desc == null || desc.isEmpty) ? fallback : desc;
+      } else
+        return fallback;
     } catch (_) {
       return fallback;
     }
@@ -61,23 +67,17 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> {
         return _cleanText(html);
       }
       final doc = html_parser.parse(html);
-      final lis = doc.querySelectorAll('li');
-      if (lis.isNotEmpty) {
-        return lis.map((e) => '• ${_cleanText(e.text)}').join('\n').trim();
-      }
       return _cleanText(doc.body?.text ?? html);
     } catch (_) {
       return _cleanText(html.replaceAll(RegExp(r'<[^>]*>'), ' '));
     }
   }
 
-  Future<void> _copy(String html) async {
+  Future<void> _copy(BuildContext context, String html) async {
     final plain = _htmlToPlainText(html);
     await Clipboard.setData(ClipboardData(text: plain));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Description copied')),
-    );
+    Fluttertoast.showToast(msg: "Copied");
   }
 
   @override
@@ -180,7 +180,6 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> {
                     ),
                   ],
                 ),
-                // Copy button (uses AppColor.PRIMERY as requested; adjust import/name if different in the app).
                 Positioned(
                   right: 16,
                   bottom: 16,
@@ -195,7 +194,7 @@ class _TaskDetailSheetState extends State<_TaskDetailSheet> {
                         heroTag: 'copyTaskDescriptionFab',
                         backgroundColor: AppColors.PRIMARY, // as requested
                         onPressed:
-                            canCopy ? () => _copy(snapshot.data!.trim()) : null,
+                            canCopy ? () => _copy(context, snapshot.data!.trim()) : null,
                         child: const Icon(Icons.copy, color: Colors.white),
                       );
                     },

@@ -14,6 +14,7 @@ class DateInputFieldValue {
 class DateInputField extends StatefulWidget {
   final String labelText;
   final String hintText;
+  final String? datePickerFormat;
   final DateTime? initialDate;
   final DateTime firstDate;
   final DateTime lastDate;
@@ -35,20 +36,21 @@ class DateInputField extends StatefulWidget {
     required this.labelText,
     this.hintText = ConstFormats.DATE_MMDDYYYY,
     this.initialDate,
+    this.datePickerFormat,
     DateTime? firstDate,
     DateTime? lastDate,
     required this.onDateSelected,
     required this.onDateError,
-    this.validator = Validators.validateDate,
+    this.validator = Validators.validateDateFormat,
     this.border = const OutlineInputBorder(),
     this.isDense = true,
     this.readOnly = false,
     this.labelStyle,
     this.hintStyle,
     this.errorStyle,
-  }) : firstDate = firstDate ?? _defaultFirstDate,
-       lastDate = lastDate ?? _defaultLastDate,
-       super(key: key);
+  })  : firstDate = firstDate ?? _defaultFirstDate,
+        lastDate = lastDate ?? _defaultLastDate,
+        super(key: key);
 
   @override
   State<DateInputField> createState() => _DateInputFieldState();
@@ -78,7 +80,7 @@ class _DateInputFieldState extends State<DateInputField> {
     super.didUpdateWidget(oldWidget);
     if (widget.initialDate != oldWidget.initialDate) {
       _dateController.text = widget.initialDate?.format() ?? '';
-      
+
       // Schedule the validation after the build is complete
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _validateAndNotify(_dateController.text);
@@ -94,7 +96,7 @@ class _DateInputFieldState extends State<DateInputField> {
 
   void _validateAndNotify(String text) {
     final error = widget.validator(text);
-    
+
     setState(() {
       _errorText = error;
     });
@@ -123,16 +125,30 @@ class _DateInputFieldState extends State<DateInputField> {
 
   Future<void> _pickDate() async {
     final initial = widget.initialDate ?? DateTime.now();
-    final initialDate = initial.isBefore(widget.firstDate) || initial.isAfter(widget.lastDate)
-        ? widget.firstDate
-        : initial;
+    final initialDate =
+        initial.isBefore(widget.firstDate) || initial.isAfter(widget.lastDate)
+            ? widget.firstDate
+            : initial;
 
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: initialDate,
-      firstDate: widget.firstDate,
-      lastDate: widget.lastDate,
-    );
+    DateTime? picked;
+
+    if (widget.datePickerFormat == "week") {
+      picked = await showDatePicker(
+          context: context,
+          initialDate: widget.initialDate != null ? initialDate : null,
+          firstDate: widget.firstDate,
+          lastDate: widget.lastDate,
+          selectableDayPredicate: (date) {
+            return date.weekday == DateTime.sunday;
+          });
+    } else {
+      picked = await showDatePicker(
+        context: context,
+        initialDate: initialDate,
+        firstDate: widget.firstDate,
+        lastDate: widget.lastDate,
+      );
+    }
 
     if (picked != null) {
       final formattedDate = picked.format();

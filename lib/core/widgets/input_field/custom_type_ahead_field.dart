@@ -198,6 +198,15 @@ class _CustomTypeAheadFieldState extends State<CustomTypeAheadField> {
                     _sugCtrl.refresh();
                   }
                 },
+                onTap: () {
+                  _typedSinceFocus = false;
+                  if (!fieldFocusNode.hasFocus && widget.enabled) {
+                    fieldFocusNode.requestFocus();
+                  } else {
+                    fieldFocusNode.unfocus();
+                  }
+                  setState(() {});
+                },
                 decoration: InputDecoration(
                   labelText: widget.label,
                   errorText: widget.errorText,

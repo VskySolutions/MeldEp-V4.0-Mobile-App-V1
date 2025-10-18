@@ -60,19 +60,19 @@ dependencies:
   google_mlkit_face_detection: ^0.13.1
   path_provider: ^2.1.5
   flutter_image_compress: ^2.4.0
+  image_cropper: ^11.0.0
+  flutter_native_splash: ^2.4.6
+  url_launcher: ^6.3.2
+  version: ^3.0.2
   # selector_wheel: ^1.1.2
   # file_picker: ^5.2.5
+
+flutter_native_splash:
+  file: flutter_native_splash.yaml
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-# flutter_native_splash:
-#   color: "#FFFFFF"
-#   image: assets/icon/vskyLogo.png
-#   android: true
-#   ios: true
-#   web: false
 
 flutter_icons:
   android: true

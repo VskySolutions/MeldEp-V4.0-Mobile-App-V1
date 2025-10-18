@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:test_project/boot/auth.dart';
+import 'package:test_project/core/services/update_banner_service.dart';
+import 'package:test_project/core/widgets/update_banner/update_banner_dialog.dart';
 import 'package:test_project/features/auth/forgot_password/forgot_password_screen.dart';
 import 'package:test_project/features/eye_glasses_ar/eye_glasses_ar_screen.dart';
 import 'package:test_project/features/home/home.dart';
@@ -22,223 +24,237 @@ import '../../navigation/top_tab_org_management.dart';
 import '../../features/org_management/apply_leave/apply_leave_screen.dart';
 
 class AppRouter {
-  static final RouteObserver<ModalRoute<void>> routeObserver =
-      RouteObserver<ModalRoute<void>>();
+  // static final RouteObserver<ModalRoute<void>> routeObserver =
+  //     RouteObserver<ModalRoute<void>>();
 
   static GoRouter get router => GoRouter(
-        observers: [routeObserver],
+        // observers: [routeObserver],
         refreshListenable: AuthService.instance,
         initialLocation:
             AuthService.instance.isLoggedIn ? '/main/home' : '/login',
+
+        observers: [RouteObserver<ModalRoute<void>>()],
         routes: [
-          // Public login route: can remain as-is
-          GoRoute(
-            name: 'login',
-            path: '/login',
-            builder: (_, __) => const LoginScreen(),
-          ),
-
-          GoRoute(
-            name: 'forgotPassword',
-            path: '/forgotPassword',
-            builder: (_, __) => const ForgotPasswordScreen(),
-          ),
-
-          // Non-tab detail routes: can remain as-is
-          GoRoute(
-            name: 'fillTimesheet',
-            path: '/fillTimesheet/:id/:mins',
-            builder: (context, state) {
-              final id = state.pathParameters['id']!;
-              final mins = state.pathParameters['mins']!;
-              return FillTimesheetScreen(id, activityMins: mins);
-            },
-          ),
-          GoRoute(
-            name: 'addTimesheet',
-            path: '/addTimesheet/:id',
-            builder: (context, state) {
-              final id = state.pathParameters['id'];
-              return AddTimesheetScreen(timesheetId: id);
-            },
-          ),
-          GoRoute(
-            name: 'addTimesheetLines',
-            path: '/addTimesheetLines/:id/:subject/:strDate/:endDate/:duration',
-            builder: (context, state) {
-              final id = state.pathParameters['id'];
-              final subject = state.pathParameters['subject']!;
-              final strDate = state.pathParameters['strDate']!;
-              final endDate = state.pathParameters['endDate']!;
-              final duration = state.pathParameters['duration']!;
-              return AddTimesheetLinesScreen(
-                meetingUId: id,
-                meetingSubject: subject,
-                meetingStrDateTime: strDate,
-                meetingEndDateTime: endDate,
-                meetingDuration: duration,
+          ShellRoute(
+            builder: (context, state, child) {
+              return Stack(
+                children: [
+                  child,
+                  const UpdateBannerDialog(),
+                ],
               );
             },
-          ),
-          GoRoute(
-            name: 'timeInTimeOutDetail',
-            path: '/timeInTimeOutDetail/:id',
-            builder: (context, state) {
-              final id = state.pathParameters['id']!;
-              return TimeInTimeOutViewMoreScreen(id: id);
-            },
-          ),
-          GoRoute(
-            name: 'myTaskAndActivityDetail',
-            path: '/myTaskAndActivityDetail/:id',
-            builder: (context, state) {
-              final id = state.pathParameters['id']!;
-              return ProjectActivityDetailsScreen(id: id);
-            },
-          ),
-          GoRoute(
-            name: 'myTaskAndActivityEdit',
-            path: '/myTaskAndActivityEdit/:id',
-            builder: (context, state) {
-              final id = state.pathParameters['id']!;
-              return MyTaskAndActivityEditScreen(id: id);
-            },
-          ),
-          GoRoute(
-            name: 'myTaskAndActivityNote',
-            path: '/myTaskAndActivityNote/:id',
-            builder: (context, state) {
-              final id = state.pathParameters['id']!;
-              return MyTaskAndActivityNoteScreen(id: id);
-            },
-          ),
-
-          GoRoute(
-            name: 'eyeGlassesAR',
-            path: '/eyeGlassesAR',
-            builder: (_, __) => const EyeGlassesArScreen(),
-          ),
-
-          // Bottom tabs shell
-          StatefulShellRoute.indexedStack(
-            builder: (context, state, navigationShell) {
-              return BottomTabBar(navigationShell: navigationShell);
-            },
-            branches: [
-              // Home tab root: pageBuilder + key from state.uri
-              StatefulShellBranch(
-                routes: [
-                  GoRoute(
-                    name: 'home',
-                    path: '/main/home',
-                    pageBuilder: (context, state) => NoTransitionPage(
-                      key: ValueKey('home-${state.uri.toString()}'),
-                      child: const HomeScreen(),
-                    ),
-                  ),
-                ],
+            routes: [
+              GoRoute(
+                name: 'login',
+                path: '/login',
+                builder: (_, __) => const LoginScreen(),
               ),
 
-              // Task tab root
-              StatefulShellBranch(
-                routes: [
-                  GoRoute(
-                    name: 'task',
-                    path: '/main/task',
-                    pageBuilder: (context, state) => NoTransitionPage(
-                      key: ValueKey('task-${state.uri.toString()}'),
-                      child: const TaskAndActivityScreen(),
-                    ),
-                  ),
-                ],
+              GoRoute(
+                name: 'forgotPassword',
+                path: '/forgotPassword',
+                builder: (_, __) => const ForgotPasswordScreen(),
               ),
 
-              // Timesheet tab root
-              StatefulShellBranch(
-                routes: [
-                  GoRoute(
-                    name: 'timesheet',
-                    path: '/main/timesheet',
-                    pageBuilder: (context, state) => NoTransitionPage(
-                      key: ValueKey('timesheet-${state.uri.toString()}'),
-                      child: const TimesheetScreen(),
-                    ),
-                  ),
-                ],
+              // Non-tab detail routes: can remain as-is
+              GoRoute(
+                name: 'fillTimesheet',
+                path: '/fillTimesheet/:id/:mins',
+                builder: (context, state) {
+                  final id = state.pathParameters['id']!;
+                  final mins = state.pathParameters['mins']!;
+                  return FillTimesheetScreen(id, activityMins: mins);
+                },
+              ),
+              GoRoute(
+                name: 'addTimesheet',
+                path: '/addTimesheet/:id',
+                builder: (context, state) {
+                  final id = state.pathParameters['id'];
+                  return AddTimesheetScreen(timesheetId: id);
+                },
+              ),
+              GoRoute(
+                name: 'addTimesheetLines',
+                path:
+                    '/addTimesheetLines/:id/:subject/:strDate/:endDate/:duration',
+                builder: (context, state) {
+                  final id = state.pathParameters['id'];
+                  final subject = state.pathParameters['subject']!;
+                  final strDate = state.pathParameters['strDate']!;
+                  final endDate = state.pathParameters['endDate']!;
+                  final duration = state.pathParameters['duration']!;
+                  return AddTimesheetLinesScreen(
+                    meetingUId: id,
+                    meetingSubject: subject,
+                    meetingStrDateTime: strDate,
+                    meetingEndDateTime: endDate,
+                    meetingDuration: duration,
+                  );
+                },
+              ),
+              GoRoute(
+                name: 'timeInTimeOutDetail',
+                path: '/timeInTimeOutDetail/:id',
+                builder: (context, state) {
+                  final id = state.pathParameters['id']!;
+                  return TimeInTimeOutViewMoreScreen(id: id);
+                },
+              ),
+              GoRoute(
+                name: 'myTaskAndActivityDetail',
+                path: '/myTaskAndActivityDetail/:id',
+                builder: (context, state) {
+                  final id = state.pathParameters['id']!;
+                  return ProjectActivityDetailsScreen(id: id);
+                },
+              ),
+              GoRoute(
+                name: 'myTaskAndActivityEdit',
+                path: '/myTaskAndActivityEdit/:id',
+                builder: (context, state) {
+                  final id = state.pathParameters['id']!;
+                  return MyTaskAndActivityEditScreen(id: id);
+                },
+              ),
+              GoRoute(
+                name: 'myTaskAndActivityNote',
+                path: '/myTaskAndActivityNote/:id',
+                builder: (context, state) {
+                  final id = state.pathParameters['id']!;
+                  return MyTaskAndActivityNoteScreen(id: id);
+                },
               ),
 
-              // Org tab root (with nested subroute)
-              StatefulShellBranch(
-                routes: [
-                  GoRoute(
-                    name: 'org',
-                    path: '/main/org',
-                    pageBuilder: (context, state) => NoTransitionPage(
-                      key: ValueKey('org-${state.uri.toString()}'),
-                      child: const TopTabOrgManagement(),
-                    ),
+              GoRoute(
+                name: 'eyeGlassesAR',
+                path: '/eyeGlassesAR',
+                builder: (_, __) => const EyeGlassesArScreen(),
+              ),
+
+              // Bottom tabs shell
+              StatefulShellRoute.indexedStack(
+                builder: (context, state, navigationShell) {
+                  return BottomTabBar(navigationShell: navigationShell);
+                },
+                branches: [
+                  // Home tab root: pageBuilder + key from state.uri
+                  StatefulShellBranch(
                     routes: [
                       GoRoute(
-                        name: 'orgApplyLeave',
-                        path: 'applyLeave',
-                        builder: (_, __) => const ApplyLeaveScreen(),
+                        name: 'home',
+                        path: '/main/home',
+                        pageBuilder: (context, state) => NoTransitionPage(
+                          key: ValueKey('home-${state.uri.toString()}'),
+                          child: const HomeScreen(),
+                        ),
                       ),
                     ],
                   ),
-                ],
-              ),
 
-              // Time-in/Time-out tab root
-              StatefulShellBranch(
-                routes: [
-                  GoRoute(
-                    name: 'timeInTimeOut',
-                    path: '/main/timeInTimeOut',
-                    pageBuilder: (context, state) => NoTransitionPage(
-                      key: ValueKey('tito-${state.uri.toString()}'),
-                      child: TimeInTimeOutScreen(),
-                    ),
+                  // Task tab root
+                  StatefulShellBranch(
+                    routes: [
+                      GoRoute(
+                        name: 'task',
+                        path: '/main/task',
+                        pageBuilder: (context, state) => NoTransitionPage(
+                          key: ValueKey('task-${state.uri.toString()}'),
+                          child: const TaskAndActivityScreen(),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
 
-              // Time Buddy tab root
-              StatefulShellBranch(
-                routes: [
-                  GoRoute(
-                    name: 'timeBuddy',
-                    path: '/main/timeBuddy',
-                    pageBuilder: (context, state) => NoTransitionPage(
-                      key: ValueKey('time_buddy-${state.uri.toString()}'),
-                      child: MeetingsScreen(),
-                    ),
+                  // Timesheet tab root
+                  StatefulShellBranch(
+                    routes: [
+                      GoRoute(
+                        name: 'timesheet',
+                        path: '/main/timesheet',
+                        pageBuilder: (context, state) => NoTransitionPage(
+                          key: ValueKey('timesheet-${state.uri.toString()}'),
+                          child: const TimesheetScreen(),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
 
-              // StatefulShellBranch(
-              //   routes: [
-              //     GoRoute(
-              //       name: 'eyeGlassesAR',
-              //       path: '/eyeGlassesAR',
-              //       pageBuilder: (context, state) => NoTransitionPage(
-              //         key: ValueKey('eye-glasses-${state.uri.toString()}'),
-              //         child: EyeGlassesArScreen(),
-              //       ),
-              //     ),
-              //   ],
-              // ),
+                  // Org tab root (with nested subroute)
+                  StatefulShellBranch(
+                    routes: [
+                      GoRoute(
+                        name: 'org',
+                        path: '/main/org',
+                        pageBuilder: (context, state) => NoTransitionPage(
+                          key: ValueKey('org-${state.uri.toString()}'),
+                          child: const TopTabOrgManagement(),
+                        ),
+                        routes: [
+                          GoRoute(
+                            name: 'orgApplyLeave',
+                            path: 'applyLeave',
+                            builder: (_, __) => const ApplyLeaveScreen(),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
 
-              // Profile tab root
-              StatefulShellBranch(
-                routes: [
-                  GoRoute(
-                    name: 'profile',
-                    path: '/main/profile',
-                    pageBuilder: (context, state) => NoTransitionPage(
-                      key: ValueKey('profile-${state.uri.toString()}'),
-                      child: const ProfileScreen(),
-                    ),
+                  // Time-in/Time-out tab root
+                  StatefulShellBranch(
+                    routes: [
+                      GoRoute(
+                        name: 'timeInTimeOut',
+                        path: '/main/timeInTimeOut',
+                        pageBuilder: (context, state) => NoTransitionPage(
+                          key: ValueKey('tito-${state.uri.toString()}'),
+                          child: TimeInTimeOutScreen(),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Time Buddy tab root
+                  StatefulShellBranch(
+                    routes: [
+                      GoRoute(
+                        name: 'timeBuddy',
+                        path: '/main/timeBuddy',
+                        pageBuilder: (context, state) => NoTransitionPage(
+                          key: ValueKey('time_buddy-${state.uri.toString()}'),
+                          child: MeetingsScreen(),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // StatefulShellBranch(
+                  //   routes: [
+                  //     GoRoute(
+                  //       name: 'eyeGlassesAR',
+                  //       path: '/eyeGlassesAR',
+                  //       pageBuilder: (context, state) => NoTransitionPage(
+                  //         key: ValueKey('eye-glasses-${state.uri.toString()}'),
+                  //         child: EyeGlassesArScreen(),
+                  //       ),
+                  //     ),
+                  //   ],
+                  // ),
+
+                  // Profile tab root
+                  StatefulShellBranch(
+                    routes: [
+                      GoRoute(
+                        name: 'profile',
+                        path: '/main/profile',
+                        pageBuilder: (context, state) => NoTransitionPage(
+                          key: ValueKey('profile-${state.uri.toString()}'),
+                          child: const ProfileScreen(),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -250,7 +266,7 @@ class AppRouter {
           final currentPath = state.uri.path;
 
           // Define all public routes that don't require authentication
-          final publicRoutes = ['/login', '/forgotPassword'];
+          final publicRoutes = ['/login', '/forgotPassword', '/eyeGlassesAR'];
           final isPublicRoute = publicRoutes.contains(currentPath);
 
           if (!loggedIn && !isPublicRoute) return '/login';
