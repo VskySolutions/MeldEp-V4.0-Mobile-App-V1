@@ -88,7 +88,51 @@ class MyTaskAndActivityService {
     return await Network.authDio.delete('/notes/deletenote/?id=$id');
   }
 
-  Future<dynamic> makeTaskStatusActiveInactive( String? id, bool? status) async {
+  Future<dynamic> makeTaskStatusActiveInactive(String? id, bool? status) async {
     return await Network.authDio.put('/project-activities/$id/$status');
+  }
+
+  Future<dynamic> changeActivityStatus(Map<String, dynamic> payload) async {
+    return await Network.authDio
+        .put('/project-activities/updateTaskActivityStatus', data: payload);
+  }
+
+  Future<dynamic> fetchProjectNameDropdownIds() async {
+    return await Network.authDio.get(
+      '/projects/dropdown/list?statuses=Open&statuses=New&statuses=In%20progress',
+    );
+  }
+
+  Future<dynamic> fetchModuleNameIds(String projectId) async {
+    return await Network.authDio.get(
+      '/project-modules/dropdown/list?ProjectId=$projectId',
+    );
+  }
+
+  Future<dynamic> fetchTaskNameIds(
+    String projectId,
+    String moduleId,
+    String? employeeId,
+  ) async {
+    return await Network.authDio.get(
+      '/project-tasks/dropdown/list/$projectId/$moduleId/$employeeId',
+    );
+  }
+
+  Future<dynamic> fetchActivityNameIds(
+    String projectId,
+    String moduleId,
+    String taskId,
+    String date,
+  ) async {
+    return await Network.authDio.get(
+      '/project-activities/dailytimesheetdropdown/list/$projectId/$moduleId/$taskId',
+    );
+  }
+
+  Future<dynamic> fetchTaskDescriptionById(String? id) async {
+    return await Network.authDio.get(
+      '/project-tasks/details/$id',
+    );
   }
 }

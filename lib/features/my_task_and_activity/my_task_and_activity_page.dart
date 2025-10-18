@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:fluttertoast/fluttertoast.dart';
@@ -10,7 +12,9 @@ import 'package:test_project/core/theme/app_colors.dart';
 import 'package:test_project/core/utils/extensions.dart';
 import 'package:test_project/core/widgets/chip/filter_chip_widget%20.dart';
 import 'package:test_project/core/widgets/custom_snackbar.dart';
+import 'package:test_project/core/widgets/dropdown/activity_status_pill_dropdown.dart';
 import 'package:test_project/core/widgets/reusable_app_bar.dart';
+import 'package:test_project/features/my_task_and_activity/model/task_and_activity_details_model.dart';
 import 'package:test_project/features/my_task_and_activity/my_task_and_activity_service.dart';
 import 'package:test_project/features/my_task_and_activity/widgets/my_task_and_activity_filter.dart';
 import 'package:test_project/navigation/timer_key.dart';
@@ -41,8 +45,9 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
   /// --------------------------------------------------------------------------------------------------------------------------------------------------
 
   // Data
-  List<ProjectTaskActivityModel> _taskList = <ProjectTaskActivityModel>[];
-  List<ProjectTaskActivityModel> _selectedTasks = <ProjectTaskActivityModel>[];
+  List<ProjectActivityListItem> _taskList = <ProjectActivityListItem>[];
+  Set<String> _selectedIds = <String>{};
+  List<Map<String, String>> _activityStatusDropdown = [];
 
   // Pagination
   int _currentPage = 1;
@@ -61,7 +66,14 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
   String? _searchActivityStatusId;
   String? _searchTaskStatusId;
   String? _searchActiveStatus = 'Active';
+  DateTime? _searchSprintWeekEndDate;
   DateTime? _searchTargetMonth;
+
+  // Static Search
+  final TextEditingController _staticSearchFilterController =
+      TextEditingController();
+  bool _isShowStaticSearchField = false;
+  Timer? _searchDepounceTimer;
 
   /// --------------------------------------------------------------------------------------------------------------------------------------------------
   /// Lifecycle
@@ -71,6 +83,14 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
   void initState() {
     super.initState();
     _fetchTasks(isGetEmployeeId: true);
+    _fetchActivityStatus();
+  }
+
+  @override
+  void dispose() {
+    _searchDepounceTimer?.cancel();
+    _staticSearchFilterController.dispose();
+    super.dispose();
   }
 
   /// --------------------------------------------------------------------------------------------------------------------------------------------------
@@ -81,6 +101,8 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
   Future<void> _fetchTasks({
     bool isGetEmployeeId = false,
     bool isLoadMore = false,
+    bool isSearchLoad = false,
+    String searchText = "",
   }) async {
     if (_isLoading) return;
 
@@ -88,7 +110,14 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
       setState(() {
         _currentPage = 1;
         _isTaskActivityInitialLoading = true;
-        _selectedTasks = [];
+        _selectedIds.clear();
+      });
+    }
+
+    if (isSearchLoad) {
+      setState(() {
+        _currentPage = 1;
+        _selectedIds.clear();
       });
     }
 
@@ -114,21 +143,29 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
       "projectIds": _searchProjectId != null ? [_searchProjectId] : [],
       "projectModuleIds":
           _searchProjectModuleId != null ? [_searchProjectModuleId] : [],
-      "searchText": "",
+      "searchText": searchText,
       "sortBy": "project.name",
+      "sorts": {},
+      "sprintWeekEndDate": _searchSprintWeekEndDate != null
+          ? _searchSprintWeekEndDate!.format()
+          : null,
       "statusIds": _searchTaskStatusId != null ? [_searchTaskStatusId] : [],
     };
 
     try {
-      final response = await MyTaskAndActivityService.instance.fetchTasks(
-        payload,
-      );
-      final parsed = response.data;
-      final List<dynamic> dataList = parsed['data'];
+      final response =
+          await MyTaskAndActivityService.instance.fetchTasks(payload);
 
-      final fetchedTasks = dataList
-          .map((json) => ProjectTaskActivityModel.fromJson(json))
-          .toList();
+      // `response.data` should be a Map<String, dynamic> matching your API wrapper
+      final Map<String, dynamic> parsed =
+          (response.data as Map<String, dynamic>);
+
+      // Parse into the typed response object
+      final TaskAndActivityDetailsModel listResp =
+          TaskAndActivityDetailsModel.fromJson(parsed);
+
+      // Get typed items
+      final List<ProjectActivityListItem> fetchedTasks = listResp.data;
 
       setState(() {
         if (_currentPage == 1) {
@@ -136,13 +173,18 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
         } else {
           _taskList.addAll(fetchedTasks);
         }
+
         _currentPage++;
+        // adapt page-size check to your backend page size (you used 15 earlier)
         _hasMore = fetchedTasks.length == 15;
+
         _isLoading = false;
         _isTaskActivityLoading = false;
         _isTaskActivityInitialLoading = false;
       });
-    } catch (e) {
+    } catch (e, st) {
+      // handle/paranoid logging
+      debugPrint('fetchTasks error: $e\n$st');
       setState(() {
         _isLoading = false;
         _isTaskActivityLoading = false;
@@ -195,26 +237,85 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
     }
   }
 
+  Future<void> _updateActivityStatus(
+    String activityId,
+    String statusId,
+    BuildContext context,
+  ) async {
+    final Map<String, dynamic> payload = {
+      "activityIds": [activityId],
+      "activityStatusId": statusId,
+    };
+
+    try {
+      final response =
+          await MyTaskAndActivityService.instance.changeActivityStatus(payload);
+      if (response.statusCode == 204) {
+        showCustomSnackBar(
+          context,
+          message: 'Activity status changed successfully',
+        );
+        _fetchTasks();
+      } else {
+        showCustomSnackBar(
+          context,
+          message: 'Failed to change activity status',
+          backgroundColor: AppColors.ERROR,
+        );
+      }
+    } catch (e) {
+      debugPrint('Change activity status error: $e');
+      showCustomSnackBar(
+        context,
+        message: 'Error changing activity status',
+        backgroundColor: AppColors.ERROR,
+      );
+    }
+  }
+
+  Future<void> _fetchActivityStatus() async {
+    try {
+      final response =
+          await MyTaskAndActivityService.instance.fetchActivityStatus();
+      final List<dynamic> dataList = response.data;
+
+      final fetchedActivityStatus = dataList
+          .map((json) => ActivityStatusModel.fromJson(json))
+          .where((m) => m.name != "Close")
+          .toList();
+
+      setState(() {
+        _activityStatusDropdown = fetchedActivityStatus
+            .map((module) => {"id": module.id, "name": module.name})
+            .toList();
+      });
+    } catch (e) {
+      // Handle error
+    }
+  }
+
   /// --------------------------------------------------------------------------------------------------------------------------------------------------
   /// Actions & Event Handlers
   /// --------------------------------------------------------------------------------------------------------------------------------------------------
 
   /// Adds/removes a task from the selection when the checkbox is toggled.
-  void _onTaskSelected(bool selected, ProjectTaskActivityModel task) {
+  void _onTaskSelected(bool selected, ProjectActivityListItem task) {
+    final id = task.id;
+    if (id.isEmpty) return;
     setState(() {
       if (selected) {
-        _selectedTasks.add(task);
+        _selectedIds.add(id);
       } else {
-        _selectedTasks.remove(task);
+        _selectedIds.remove(id);
       }
     });
   }
 
   /// Navigates to Fill Timesheet with selected projectIds and clears selection on success.
   void _onFillTimesheetPressed(BuildContext context) async {
-    String allIds = _selectedTasks.map((task) => task.projectId).join(',');
+    final allIds = _selectedIds.join(',');
     final isSaveAndClose = await context.push('/fillTimesheet/$allIds/${null}');
-    if (isSaveAndClose == true) setState(() => _selectedTasks = []);
+    if (isSaveAndClose == true) setState(_selectedIds.clear);
   }
 
   /// Starts the floating timer for a task if no timer is currently active.
@@ -238,6 +339,21 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
       );
   }
 
+  String? _lookupNameById(List<Map<String, String>> items, String id) {
+    if (id.isEmpty) return null;
+    for (final m in items) {
+      if ((m['id'] ?? '') == id) return m['name'];
+    }
+    return null;
+  }
+
+  void _onStaticSearchFilterChange(String value) {
+    if (_searchDepounceTimer?.isActive ?? false) _searchDepounceTimer?.cancel();
+    _searchDepounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _fetchTasks(searchText: value, isSearchLoad: true, isLoadMore: true);
+    });
+  }
+
   /// --------------------------------------------------------------------------------------------------------------------------------------------------
   /// UI Helpers
   /// --------------------------------------------------------------------------------------------------------------------------------------------------
@@ -256,6 +372,7 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
           initialTaskStatusId: _searchTaskStatusId,
           initialActiveStatus: _searchActiveStatus,
           initialTargetMonth: _searchTargetMonth,
+          initialSprintWeekEndDateDate: _searchSprintWeekEndDate,
           onApplyFilter: (
             newVal1,
             newVal2,
@@ -265,6 +382,7 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
             newVal6,
             newVal7,
             newVal8,
+            newVal9,
           ) {
             setState(() {
               _searchProjectId = newVal1;
@@ -275,9 +393,10 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
               _searchTaskStatusId = newVal6;
               _searchActiveStatus = newVal7;
               _searchTargetMonth = newVal8;
+              _searchSprintWeekEndDate = newVal9;
               _currentPage = 1;
               _hasMore = true;
-              _taskList.clear();
+              _selectedIds.clear();
             });
           },
           onFetchTasks: _fetchTasks,
@@ -305,6 +424,8 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
           () => setState(() => _searchActiveStatus = null)),
       _FilterData('Target Month', _searchTargetMonth,
           () => setState(() => _searchTargetMonth = null)),
+      _FilterData('Sprint Week End Date', _searchSprintWeekEndDate,
+          () => setState(() => _searchSprintWeekEndDate = null)),
     ];
 
     return filters
@@ -334,8 +455,8 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
                   children: [
                     Container(
                       padding: EdgeInsets.symmetric(
-                        horizontal: 10,
                         vertical: 8,
+                        horizontal: 10,
                       ),
                       child: Row(
                         children: [
@@ -345,20 +466,104 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
                               child: Row(children: _buildFilterChips()),
                             ),
                           ),
-                          ElevatedButton.icon(
-                            onPressed: _showFilterDialog,
-                            label: Text(
-                              'Filter',
-                              style: TextStyle(color: AppColors.PRIMARY),
-                            ),
-                            icon: Icon(
-                              Icons.filter_list,
-                              color: AppColors.PRIMARY,
+                          Material(
+                            elevation: 2,
+                            borderRadius: BorderRadius.circular(24),
+                            child: Container(
+                              height: 40,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  InkWell(
+                                    onTap: () {
+                                      _isShowStaticSearchField
+                                          ? _onStaticSearchFilterChange("")
+                                          : null;
+                                      setState(() {
+                                        _staticSearchFilterController.clear();
+                                        _isShowStaticSearchField =
+                                            !_isShowStaticSearchField;
+                                      });
+                                    },
+                                    borderRadius: BorderRadius.horizontal(
+                                      left: Radius.circular(24),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                      ),
+                                      child: Icon(
+                                        _isShowStaticSearchField
+                                            ? Icons.search_off_outlined
+                                            : Icons.search,
+                                        color: AppColors.PRIMARY,
+                                      ),
+                                    ),
+                                  ),
+                                  Container(
+                                    width: 1,
+                                    height: 24,
+                                    color: Colors.grey.shade300,
+                                  ),
+                                  InkWell(
+                                    onTap: _showFilterDialog,
+                                    borderRadius: BorderRadius.horizontal(
+                                      right: Radius.circular(24),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                      ),
+                                      child: Icon(
+                                        Icons.filter_alt_outlined,
+                                        color: AppColors.PRIMARY,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
+                    if (_isShowStaticSearchField)
+                      Padding(
+                        padding: const EdgeInsets.only(
+                            left: 10, right: 10, bottom: 8),
+                        child: TextField(
+                          controller: _staticSearchFilterController,
+                          onChanged: (value) =>
+                              _onStaticSearchFilterChange(value),
+                          decoration: InputDecoration(
+                            labelText: 'Search',
+                            hintText: 'Search',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                            suffixIcon: _isTaskActivityLoading
+                                ? Transform.scale(
+                                    scale: 0.4,
+                                    child: CircularProgressIndicator(
+                                      color: AppColors.PRIMARY,
+                                      strokeWidth: 4,
+                                    ),
+                                  )
+                                : IconButton(
+                                    icon: const Icon(Icons.cancel_outlined),
+                                    onPressed: () {
+                                      setState(() {
+                                        _staticSearchFilterController.clear();
+                                      });
+                                      _onStaticSearchFilterChange("");
+                                    },
+                                  ),
+                          ),
+                        ),
+                      ),
                     Center(
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -382,96 +587,85 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
                     Expanded(
                       child: RefreshIndicator(
                         color: AppColors.PRIMARY,
-                        onRefresh: () async {
-                          await _fetchTasks();
-                        },
+                        onRefresh: () async => _fetchTasks(),
+                        // Always provide a scrollable child so pull-to-refresh works when empty/short
                         child: _taskList.isEmpty
-                            ? Center(
-                                child: Text(
-                                  'No Data Available',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.grey[600],
+                            ? ListView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                children: [
+                                  SizedBox(
+                                      height:
+                                          MediaQuery.of(context).size.height *
+                                              0.3),
+                                  Center(
+                                    child: Text(
+                                      'No Data Available',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                ],
                               )
                             : ListView.builder(
                                 itemCount: _taskList.length + 1,
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                // shrinkWrap removed to ensure this remains the primary scrollable
                                 itemBuilder: (context, index) {
                                   if (index == _taskList.length) {
+                                    // Footer
                                     return Column(
                                       children: [
                                         if (_hasMore)
                                           Center(
                                             child: ElevatedButton(
-                                              onPressed: () {
-                                                _isTaskActivityLoading
-                                                    ? null
-                                                    : _fetchTasks(
-                                                        isLoadMore: true,
-                                                      );
-                                              },
+                                              onPressed: _isTaskActivityLoading
+                                                  ? null
+                                                  : () => _fetchTasks(
+                                                      isLoadMore: true),
                                               child: _isTaskActivityLoading
                                                   ? const SizedBox(
                                                       width: 18,
                                                       height: 18,
                                                       child:
                                                           CircularProgressIndicator(
-                                                        strokeWidth: 2,
-                                                        valueColor:
-                                                            AlwaysStoppedAnimation<
-                                                                Color>(
-                                                          AppColors.PRIMARY,
-                                                        ),
-                                                      ),
+                                                              strokeWidth: 2),
                                                     )
-                                                  : const Text(
-                                                      'Load More',
-                                                      style: TextStyle(
-                                                        color:
-                                                            AppColors.PRIMARY,
-                                                      ),
-                                                    ),
+                                                  : const Text('Load More'),
                                             ),
                                           ),
-                                        if (_taskList.length > 0 && !_hasMore)
+                                        if (_taskList.isNotEmpty && !_hasMore)
                                           Container(
-                                            margin: EdgeInsets.only(top: 6),
-                                            child: Column(
-                                              children: [
-                                                Text(
-                                                  "All items loaded",
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: Colors.grey.shade500,
-                                                  ),
-                                                ),
-                                              ],
+                                            margin:
+                                                const EdgeInsets.only(top: 6),
+                                            child: Text(
+                                              "All items loaded",
+                                              style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey.shade500),
                                             ),
                                           ),
                                         Container(
-                                          margin: EdgeInsets.only(
-                                            bottom: 14,
-                                            top: 10,
-                                          ),
+                                          margin: const EdgeInsets.only(
+                                              bottom: 14, top: 10),
                                           child: Row(
                                             mainAxisAlignment:
                                                 MainAxisAlignment.center,
                                             children: [
                                               Icon(
-                                                Icons
-                                                    .arrow_circle_down_outlined,
-                                                size: 14,
-                                                color: Colors.grey.shade500,
-                                              ),
-                                              SizedBox(width: 8),
+                                                  Icons
+                                                      .arrow_circle_down_outlined,
+                                                  size: 14,
+                                                  color: Colors.grey.shade500),
+                                              const SizedBox(width: 8),
                                               Text(
                                                 "Pull down to refresh content",
                                                 style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: Colors.grey.shade500,
-                                                ),
+                                                    fontSize: 12,
+                                                    color:
+                                                        Colors.grey.shade500),
                                               ),
                                             ],
                                           ),
@@ -480,30 +674,88 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
                                     );
                                   }
 
-                                  final task = _taskList[index];
-                                  final isSelected = _selectedTasks.contains(
-                                    task,
-                                  );
+                                  final ProjectActivityListItem task =
+                                      _taskList[index];
+
+                                  // Use stable unique id for selection
+                                  final bool isSelected =
+                                      _selectedIds.contains(task.id);
+
+                                  // Local vars used > once (keep fallbacks as in current code)
+                                  final String projectId = task.id;
+
+                                  final String assignedToFullName = (task
+                                              .assignedTo
+                                              ?.person
+                                              ?.fullName
+                                              ?.isNotEmpty ==
+                                          true)
+                                      ? task.assignedTo!.person.fullName
+                                      : '${task.assignedTo?.person?.firstName ?? ''} ${task.assignedTo?.person?.lastName ?? ''}'
+                                          .trim();
+
+                                  final String activityNameDescription = (task
+                                              .activityNameDescription
+                                              ?.isNotEmpty ==
+                                          true)
+                                      ? task.activityNameDescription!
+                                      : (task.description?.isNotEmpty == true
+                                          ? task.description!
+                                          : '');
+
+                                  final double? estimateHours =
+                                      (task.estimateHours != 0.0)
+                                          ? task.estimateHours
+                                          : (task.task?.estimateTime != 0.0
+                                              ? task.task?.estimateTime
+                                              : null);
+
+                                  final bool disableOpen =
+                                      task.description.isEmpty;
+
+                                  final String currentId =
+                                      (task.activityStatus?.id?.isNotEmpty ==
+                                              true)
+                                          ? task.activityStatus!.id
+                                          : '';
+
+                                  final String currentName = _lookupNameById(
+                                          _activityStatusDropdown, currentId) ??
+                                      ((task.activityStatus?.dropDownValue
+                                                  ?.isNotEmpty ==
+                                              true)
+                                          ? task.activityStatus!.dropDownValue
+                                          : (task.task?.status?.dropDownValue ??
+                                              '--'));
+
+                                  final sprintWeekEndDate = task.task
+                                      .projectWeeklyPlanDatesReqTaskIssueMappingList
+                                      .map((mapping) => mapping
+                                          .projectWeeklyPlanDates.weekDate)
+                                      .where((weekDate) =>
+                                          weekDate != null &&
+                                          weekDate.isNotEmpty)
+                                      .join(',');
 
                                   return Card(
                                     elevation: 4,
-                                    margin: EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 8,
-                                    ),
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 8),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
+                                        borderRadius:
+                                            BorderRadius.circular(12)),
                                     child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
+                                        // Header with actions
                                         Container(
                                           width: double.infinity,
-                                          padding: EdgeInsets.all(8),
+                                          padding: const EdgeInsets.all(8),
                                           decoration: BoxDecoration(
                                             color: AppColors.PRIMARY,
-                                            borderRadius: BorderRadius.only(
+                                            borderRadius:
+                                                const BorderRadius.only(
                                               topLeft: Radius.circular(12),
                                               topRight: Radius.circular(12),
                                             ),
@@ -511,21 +763,32 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
                                           child: Row(
                                             mainAxisAlignment:
                                                 MainAxisAlignment.spaceBetween,
-                                            mainAxisSize: MainAxisSize.min,
                                             children: [
                                               Checkbox(
                                                 value: isSelected,
-                                                onChanged: (value) =>
+                                                onChanged: (value) {
+                                                  if (!disableOpen &&
+                                                      currentName
+                                                              .toLowerCase() ==
+                                                          'open') {
                                                     _onTaskSelected(
-                                                        value!, task),
+                                                        value!, task);
+                                                  } else {
+                                                    showCustomSnackBar(
+                                                      context,
+                                                      message:
+                                                          'Please add activity details and open the task activity before filling the timesheet.',
+                                                      backgroundColor:
+                                                          AppColors.WARNING,
+                                                      contentColor:
+                                                          Colors.black,
+                                                    );
+                                                  }
+                                                },
                                                 activeColor: AppColors.PRIMARY,
-                                                side: BorderSide(
-                                                  color: const Color.fromARGB(
-                                                    255,
-                                                    240,
-                                                    239,
-                                                    239,
-                                                  ),
+                                                side: const BorderSide(
+                                                  color: Color.fromARGB(
+                                                      255, 240, 239, 239),
                                                   width: 2,
                                                 ),
                                                 materialTapTargetSize:
@@ -536,195 +799,154 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
                                               ),
                                               Row(
                                                 children: [
-                                                  Material(
-                                                    color: Colors.transparent,
-                                                    child: InkWell(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                        4,
+                                                  // View
+                                                  InkWell(
+                                                    onTap: () => context.push(
+                                                        '/myTaskAndActivityDetail/$projectId'),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            4),
+                                                    child: Container(
+                                                      height: 25,
+                                                      width: 25,
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.white
+                                                            .withOpacity(0.2),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(4),
                                                       ),
-                                                      onTap: () async {
-                                                        context.push(
-                                                          '/myTaskAndActivityDetail/${task.projectId ?? ""}',
-                                                        );
-                                                      },
-                                                      child: Container(
-                                                        height: 25,
-                                                        width: 25,
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          color: Colors.white
-                                                              .withOpacity(0.2),
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(
-                                                            4,
-                                                          ),
-                                                        ),
-                                                        child: const Center(
-                                                          child: Icon(
+                                                      child: const Center(
+                                                        child: Icon(
                                                             Icons
                                                                 .remove_red_eye_outlined,
                                                             size: 18,
-                                                            color: Colors.white,
-                                                          ),
-                                                        ),
+                                                            color:
+                                                                Colors.white),
                                                       ),
                                                     ),
                                                   ),
-                                                  SizedBox(width: 8),
-                                                  Material(
-                                                    color: Colors.transparent,
-                                                    child: InkWell(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                        4,
+                                                  const SizedBox(width: 8),
+                                                  // Edit
+                                                  InkWell(
+                                                    onTap: () async {
+                                                      final isSaveAndClose =
+                                                          await context.push(
+                                                              '/myTaskAndActivityEdit/$projectId');
+                                                      if (isSaveAndClose ==
+                                                          true) _fetchTasks();
+                                                    },
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            4),
+                                                    child: Container(
+                                                      height: 25,
+                                                      width: 25,
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.white
+                                                            .withOpacity(0.2),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(4),
                                                       ),
-                                                      onTap: () async {
-                                                        final isSaveAndClose =
-                                                            await context.push(
-                                                          '/myTaskAndActivityEdit/${task.projectId ?? ""}',
-                                                        );
-                                                        if (isSaveAndClose ==
-                                                            true) _fetchTasks();
-                                                      },
-                                                      child: Container(
-                                                        height: 25,
-                                                        width: 25,
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          color: Colors.white
-                                                              .withOpacity(0.2),
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(
-                                                            4,
-                                                          ),
-                                                        ),
-                                                        child: const Center(
-                                                          child: Icon(
-                                                            Icons.edit,
-                                                            size: 18,
-                                                            color: Colors.white,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  if(isDev)
-                                                  SizedBox(width: 8),
-                                                  if(isDev)
-                                                  Material(
-                                                    color: Colors.transparent,
-                                                    child: InkWell(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                        4,
-                                                      ),
-                                                      onTap: () =>
-                                                          _onTimerPressed(
-                                                        task.projectId ?? "",
-                                                        task.taskName,
-                                                        task.projectName,
-                                                      ),
-                                                      child: Container(
-                                                        height: 25,
-                                                        width: 25,
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          color: Colors.white
-                                                              .withOpacity(0.2),
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(
-                                                            4,
-                                                          ),
-                                                        ),
-                                                        child: const Center(
-                                                          child: Icon(
-                                                            Icons.timer,
-                                                            size: 18,
-                                                            color: Colors.white,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  SizedBox(width: 8),
-                                                  Material(
-                                                    color: Colors.transparent,
-                                                    child: InkWell(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                        4,
-                                                      ),
-                                                      onTap: () async {
-                                                        final isSaveAndClose =
-                                                            await context.push(
-                                                          '/myTaskAndActivityNote/${task.projectId ?? ""}',
-                                                        );
-                                                        if (isSaveAndClose ==
-                                                            true) _fetchTasks();
-                                                      },
-                                                      child: Container(
-                                                        height: 25,
-                                                        width: 25,
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          color: Colors.white
-                                                              .withOpacity(0.2),
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(
-                                                            4,
-                                                          ),
-                                                        ),
-                                                        child: const Center(
-                                                          child: Icon(
-                                                            Icons.assignment,
-                                                            size: 18,
-                                                            color: Colors.white,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  SizedBox(width: 8),
-                                                  Material(
-                                                    color: Colors.transparent,
-                                                    child: InkWell(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                        4,
-                                                      ),
-                                                      onTap: () async {
-                                                        _updateTaskStatus(
-                                                          task.projectId ?? "",
-                                                          false,
-                                                          context,
-                                                        );
-                                                      },
-                                                      child: Container(
-                                                        height: 25,
-                                                        width: 25,
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          color: Colors.white
-                                                              .withOpacity(0.2),
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(
-                                                            4,
-                                                          ),
-                                                        ),
-                                                        child: const Center(
-                                                          child: Icon(
-                                                            Icons.block,
+                                                      child: const Center(
+                                                        child: Icon(Icons.edit,
                                                             size: 18,
                                                             color:
-                                                                AppColors.ERROR,
-                                                          ),
+                                                                Colors.white),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  if (isDev)
+                                                    const SizedBox(width: 8),
+                                                  if (isDev)
+                                                    InkWell(
+                                                      onTap: () =>
+                                                          _onTimerPressed(
+                                                              projectId,
+                                                              task.taskName,
+                                                              task.projectName),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              4),
+                                                      child: Container(
+                                                        height: 25,
+                                                        width: 25,
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          color: Colors.white
+                                                              .withOpacity(0.2),
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(4),
                                                         ),
+                                                        child: const Center(
+                                                          child: Icon(
+                                                              Icons.timer,
+                                                              size: 18,
+                                                              color:
+                                                                  Colors.white),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  const SizedBox(width: 8),
+                                                  // Notes
+                                                  InkWell(
+                                                    onTap: () async {
+                                                      final isSaveAndClose =
+                                                          await context.push(
+                                                              '/myTaskAndActivityNote/$projectId');
+                                                      if (isSaveAndClose ==
+                                                          true) _fetchTasks();
+                                                    },
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            4),
+                                                    child: Container(
+                                                      height: 25,
+                                                      width: 25,
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.white
+                                                            .withOpacity(0.2),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(4),
+                                                      ),
+                                                      child: const Center(
+                                                        child: Icon(
+                                                            Icons.assignment,
+                                                            size: 18,
+                                                            color:
+                                                                Colors.white),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  // Block / update status
+                                                  InkWell(
+                                                    onTap: () =>
+                                                        _updateTaskStatus(
+                                                            projectId,
+                                                            false,
+                                                            context),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            4),
+                                                    child: Container(
+                                                      height: 25,
+                                                      width: 25,
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.white
+                                                            .withOpacity(0.2),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(4),
+                                                      ),
+                                                      child: const Center(
+                                                        child: Icon(Icons.block,
+                                                            size: 18,
+                                                            color: AppColors
+                                                                .ERROR),
                                                       ),
                                                     ),
                                                   ),
@@ -733,187 +955,263 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
                                             ],
                                           ),
                                         ),
-                                        Padding(
-                                          padding: EdgeInsets.only(
-                                            top: 4,
-                                            left: 10,
-                                            right: 10,
-                                          ),
-                                          child: Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              // Checkbox(
-                                              //   value: isSelected,
-                                              //   onChanged: (value) =>
-                                              //       _onTaskSelected(value!, task),
-                                              //   activeColor: AppColors.PRIMARY,
-                                              // ),
-                                              Expanded(
-                                                child: Wrap(
+
+                                        Container(
+                                          color: disableOpen ||
+                                                  currentName.toLowerCase() !=
+                                                      'open'
+                                              ? const Color.fromARGB(
+                                                  255, 253, 236, 234)
+                                              : null,
+                                          child: Padding(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 4,
+                                            ),
+                                            child: Column(
+                                              children: [
+                                                Row(
                                                   crossAxisAlignment:
-                                                      WrapCrossAlignment.center,
-                                                  spacing: 4,
-                                                  runSpacing: 4,
+                                                      CrossAxisAlignment.start,
                                                   children: [
-                                                    Text(
-                                                      task.projectName,
-                                                      style: TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                    Icon(
-                                                      Icons.double_arrow,
-                                                      color: Colors.grey[600],
-                                                      size: 18,
-                                                    ),
-                                                    Text(
-                                                      task.projectModuleName ??
-                                                          '',
-                                                    ),
-                                                    Icon(
-                                                      Icons.double_arrow,
-                                                      color: Colors.grey[600],
-                                                      size: 18,
-                                                    ),
-                                                    Text(task.taskName),
-                                                    Text(
-                                                      '(${task.activityName})',
-                                                      style: TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                    Tooltip(
-                                                      message: task
-                                                          .activityNameDescription,
-                                                      preferBelow: true,
-                                                      child: GestureDetector(
-                                                        onTap: () {
-                                                          Fluttertoast
-                                                              .showToast(
-                                                            msg:
-                                                                "Press and hold to view activity description",
-                                                            toastLength: Toast
-                                                                .LENGTH_SHORT,
-                                                            gravity:
-                                                                ToastGravity
-                                                                    .BOTTOM,
-                                                          );
-                                                        },
-                                                        child: Icon(
-                                                          Icons.info_outline,
-                                                          size: 18,
-                                                          color:
-                                                              Colors.grey[800],
-                                                        ),
+                                                    Expanded(
+                                                      child: Wrap(
+                                                        crossAxisAlignment:
+                                                            WrapCrossAlignment
+                                                                .center,
+                                                        spacing: 4,
+                                                        runSpacing: 4,
+                                                        children: [
+                                                          Text(
+                                                            task.projectName
+                                                                    .isNotEmpty
+                                                                ? task
+                                                                    .projectName
+                                                                : (task.project
+                                                                        ?.name ??
+                                                                    ''),
+                                                            style: const TextStyle(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold),
+                                                          ),
+                                                          Icon(
+                                                              Icons
+                                                                  .double_arrow,
+                                                              color: Colors
+                                                                  .grey[600],
+                                                              size: 18),
+                                                          // projectModuleName (inline fallback)
+                                                          if ((task.projectModuleName
+                                                                      ?.isNotEmpty ??
+                                                                  false) ||
+                                                              (task
+                                                                      .projectModule
+                                                                      ?.name
+                                                                      ?.isNotEmpty ??
+                                                                  false))
+                                                            Text(
+                                                              (task.projectModuleName
+                                                                          ?.isNotEmpty ==
+                                                                      true)
+                                                                  ? task
+                                                                      .projectModuleName!
+                                                                  : (task.projectModule
+                                                                          ?.name ??
+                                                                      ''),
+                                                            ),
+                                                          Icon(
+                                                              Icons
+                                                                  .double_arrow,
+                                                              color: Colors
+                                                                  .grey[600],
+                                                              size: 18),
+                                                          // taskName (inline fallback)
+                                                          Text(task.taskName
+                                                                  .isNotEmpty
+                                                              ? task.taskName
+                                                              : (task.task
+                                                                      ?.name ??
+                                                                  '')),
+                                                          // activity name (top-level 'name' field)
+                                                          if (task
+                                                              .name.isNotEmpty)
+                                                            Text(
+                                                                '(${task.name})',
+                                                                style: const TextStyle(
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold)),
+                                                          Tooltip(
+                                                            message: activityNameDescription
+                                                                    .isNotEmpty
+                                                                ? activityNameDescription
+                                                                : 'No description',
+                                                            preferBelow: true,
+                                                            child:
+                                                                GestureDetector(
+                                                              onTap: () =>
+                                                                  Fluttertoast
+                                                                      .showToast(
+                                                                msg:
+                                                                    "Press and hold to view activity description",
+                                                              ),
+                                                              child: Icon(
+                                                                  Icons
+                                                                      .info_outline,
+                                                                  size: 18,
+                                                                  color: Colors
+                                                                          .grey[
+                                                                      800]),
+                                                            ),
+                                                          ),
+                                                        ],
                                                       ),
                                                     ),
                                                   ],
                                                 ),
-                                              ),
-                                            ],
+                                                if (sprintWeekEndDate
+                                                    .isNotEmpty)
+                                                  Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment.start,
+                                                    children: [
+                                                      Expanded(
+                                                          child: Wrap(
+                                                              crossAxisAlignment:
+                                                                  WrapCrossAlignment
+                                                                      .center,
+                                                              spacing: 4,
+                                                              runSpacing: 4,
+                                                              children: [
+                                                            Text(
+                                                              "Week:",
+                                                              style: TextStyle(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold),
+                                                            ),
+                                                            Text(sprintWeekEndDate),
+                                                          ]))
+                                                    ],
+                                                  )
+                                              ],
+                                            ),
                                           ),
                                         ),
-                                        Divider(),
+
+                                        const Divider(
+                                            height: 1,
+                                            thickness: 1,
+                                            color: Colors.grey),
+
+                                        // bottom row: assigned to, status pill, estimate hours
                                         Padding(
-                                          padding: EdgeInsets.only(
-                                            left: 10,
-                                            right: 10,
-                                            bottom: 4,
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 4,
                                           ),
                                           child: Row(
                                             children: [
-                                              // Row(
-                                              //   children: [
-                                              //     Icon(
-                                              //       Icons.calendar_today,
-                                              //       size: 16,
-                                              //       color: Colors.grey[700],
-                                              //     ),
-                                              //     SizedBox(width: 4),
-                                              //     Text(task.targetMonth ?? ''),
-                                              //   ],
-                                              // ),
-                                              // SizedBox(width: 14),
                                               Tooltip(
-                                                message:
-                                                    task.assignedToFullName,
+                                                message: assignedToFullName
+                                                        .isNotEmpty
+                                                    ? assignedToFullName
+                                                    : 'Unassigned',
                                                 preferBelow: true,
                                                 child: GestureDetector(
-                                                  onTap: () {
-                                                    Fluttertoast.showToast(
-                                                      msg:
-                                                          "Press and hold to view full name",
-                                                      toastLength:
-                                                          Toast.LENGTH_SHORT,
-                                                      gravity:
-                                                          ToastGravity.BOTTOM,
-                                                    );
-                                                  },
+                                                  onTap: () =>
+                                                      Fluttertoast.showToast(
+                                                    msg:
+                                                        "Press and hold to view full name",
+                                                  ),
                                                   child: Row(
                                                     children: [
-                                                      Icon(
-                                                        Icons.person,
-                                                        size: 18,
-                                                        color: Colors.grey[700],
-                                                      ),
+                                                      Icon(Icons.person,
+                                                          size: 18,
+                                                          color:
+                                                              Colors.grey[700]),
                                                       const SizedBox(width: 4),
                                                       Text(
-                                                        task.assignedToFullName
-                                                            .toInitials(),
+                                                        (assignedToFullName
+                                                                .isNotEmpty
+                                                            ? assignedToFullName
+                                                                .toInitials()
+                                                            : '--'),
                                                         style: const TextStyle(
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                        ),
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .bold),
                                                       ),
                                                       const SizedBox(width: 4),
-                                                      Icon(
-                                                        Icons.info_outline,
-                                                        size: 18,
-                                                        color: Colors.grey[800],
-                                                      ),
+                                                      Icon(Icons.info_outline,
+                                                          size: 18,
+                                                          color:
+                                                              Colors.grey[800]),
                                                     ],
                                                   ),
                                                 ),
                                               ),
 
-                                              Spacer(),
-                                              Container(
-                                                padding: EdgeInsets.symmetric(
-                                                  horizontal: 8,
-                                                  vertical: 4,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  border: Border.all(
-                                                    color: AppColors.PRIMARY,
-                                                  ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(4),
-                                                ),
-                                                child: Text(
-                                                  task.activityStatusValue,
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                  ),
-                                                ),
+                                              const Spacer(),
+
+                                              // status pill (inline fallback to task.task.status if activity status empty)
+                                              // Container(
+                                              //   padding:
+                                              //       const EdgeInsets.symmetric(
+                                              //           horizontal: 8,
+                                              //           vertical: 4),
+                                              //   decoration: BoxDecoration(
+                                              //     border: Border.all(
+                                              //         color: AppColors.PRIMARY),
+                                              //     borderRadius:
+                                              //         BorderRadius.circular(4),
+                                              //   ),
+                                              //   child: Text(
+                                              //     (task
+                                              //                 .activityStatus
+                                              //                 ?.dropDownValue
+                                              //                 ?.isNotEmpty ==
+                                              //             true)
+                                              //         ? task.activityStatus!
+                                              //             .dropDownValue
+                                              //         : (task.task?.status
+                                              //                 ?.dropDownValue ??
+                                              //             '--'),
+                                              //     style: const TextStyle(
+                                              //         fontSize: 12),
+                                              //   ),
+                                              // ),
+                                              BuildActivityStatusPillDropdown(
+                                                context: context,
+                                                currentId: currentId,
+                                                currentName: currentName,
+                                                disableOpen: disableOpen,
+                                                items: _activityStatusDropdown,
+                                                onChanged: (newId) {
+                                                  _updateActivityStatus(
+                                                      projectId,
+                                                      newId,
+                                                      context);
+                                                },
                                               ),
-                                              SizedBox(width: 14),
+
+                                              const SizedBox(width: 14),
+
+                                              // estimate hours (uses declared local var)
                                               Row(
                                                 children: [
-                                                  Icon(
-                                                    Icons.access_time,
-                                                    size: 16,
-                                                    color: Colors.grey[700],
-                                                  ),
-                                                  SizedBox(width: 4),
+                                                  Icon(Icons.access_time,
+                                                      size: 16,
+                                                      color: Colors.grey[700]),
+                                                  const SizedBox(width: 4),
                                                   Text(
-                                                    '${task.estimateHours ?? ''} Hrs',
-                                                    style: TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
+                                                    estimateHours != null
+                                                        ? '${estimateHours.toStringAsFixed(2)} Hrs'
+                                                        : '-- Hrs',
+                                                    style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold),
                                                   ),
                                                 ],
                                               ),
@@ -926,10 +1224,10 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
                                 },
                               ),
                       ),
-                    ),
+                    )
                   ],
                 ),
-                if (_selectedTasks.isNotEmpty)
+                if (_selectedIds.isNotEmpty)
                   Positioned(
                     bottom: 10,
                     right: 10,
@@ -950,7 +1248,7 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
                             ),
                           ),
                         ),
-                        if (_selectedTasks.isNotEmpty)
+                        if (_selectedIds.isNotEmpty)
                           Positioned(
                             right: -2,
                             top: -2,
@@ -965,7 +1263,7 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
                                 minHeight: 20,
                               ),
                               child: Text(
-                                '${_selectedTasks.length}',
+                                '${_selectedIds.length}',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 12,
@@ -984,7 +1282,7 @@ class _TaskAndActivityScreenState extends State<TaskAndActivityScreen> {
 }
 
 // Models
-class ProjectTaskActivityModel {
+class TaskAndActivityDetailsModel1 {
   final String projectName;
   final String? projectModuleName;
   final String taskName;
@@ -996,7 +1294,7 @@ class ProjectTaskActivityModel {
   final String? projectId;
   final String? activityNameDescription;
 
-  ProjectTaskActivityModel({
+  TaskAndActivityDetailsModel1({
     required this.projectName,
     this.projectModuleName,
     required this.taskName,
@@ -1009,8 +1307,8 @@ class ProjectTaskActivityModel {
     this.activityNameDescription,
   });
 
-  factory ProjectTaskActivityModel.fromJson(Map<String, dynamic> json) {
-    return ProjectTaskActivityModel(
+  factory TaskAndActivityDetailsModel1.fromJson(Map<String, dynamic> json) {
+    return TaskAndActivityDetailsModel1(
       projectName: json['projectName'] ?? '',
       projectModuleName: json['projectModuleName'],
       taskName: json['taskName'] ?? '',

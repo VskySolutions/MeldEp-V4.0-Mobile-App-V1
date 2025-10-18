@@ -45,12 +45,13 @@ class BottomTabBarState extends State<BottomTabBar> {
       ['main', 'timesheet'],
     ],
     3: [
-      ['main', 'org'],
+      ['main', 'timeBuddy'],
     ],
     // More tab should include any branch that you want to treat as "More".
     // We include both /main/more (if ever used), /main/timeInTimeOut, and /main/profile
     4: [
       ['main', 'timeInTimeOut'],
+      ['main', 'org'],
       ['main', 'profile'],
     ],
   };
@@ -59,7 +60,7 @@ class BottomTabBarState extends State<BottomTabBar> {
     0: '/main/home',
     1: '/main/task',
     2: '/main/timesheet',
-    3: '/main/org',
+    3: '/main/timeBuddy',
     4: '/main/timeInTimeOut', // Default for more tab
   };
 
@@ -131,9 +132,9 @@ class BottomTabBarState extends State<BottomTabBar> {
       case 2:
         return '/main/timesheet';
       case 3:
-        return '/main/org';
+        return '/main/timeBuddy';
       case 4:
-        return '/main/timeInTimeOut'; // Default for more tab
+        return '/main/org'; // Default for more tab
       default:
         return null;
     }
@@ -144,6 +145,10 @@ class BottomTabBarState extends State<BottomTabBar> {
     final location = GoRouterState.of(context).uri.toString();
     final isTimeInTimeOutActive =
         _isLocationInTab(location, 4) && location.contains('timeInTimeOut');
+    final isOrgActive =
+        _isLocationInTab(location, 4) && location.contains('org');
+    final isEyeGlassesArActive =
+        _isLocationInTab(location, 4) && location.contains('eyeGlassesAR');
     final isProfileActive =
         _isLocationInTab(location, 4) && location.contains('profile');
 
@@ -170,23 +175,40 @@ class BottomTabBarState extends State<BottomTabBar> {
           children: [
             Row(
               children: [
+                _buildMoreItem(
+                  icon: Icons.approval,
+                  label: 'Org',
+                  onTap: () {
+                    context.go('/main/org');
+                    setState(() => _isMoreOpen = false);
+                  },
+                  isActive: isOrgActive,
+                ),
                 if (isDev) ...[
                   _buildMoreItem(
                     icon: Icons.access_time,
                     label: 'Time-in\nTime-out',
                     onTap: () {
-                      context.go('/main/timeInTimeOut'); // Navigate to root
+                      context.go('/main/timeInTimeOut');
                       setState(() => _isMoreOpen = false);
                     },
                     isActive: isTimeInTimeOutActive,
                   ),
-                  const SizedBox(width: 16),
+                  // _buildMoreItem(
+                  //   icon: Icons.camera_alt_outlined,
+                  //   label: 'AR',
+                  //   onTap: () {
+                  //     context.go('/eyeGlassesAR');
+                  //     setState(() => _isMoreOpen = false);
+                  //   },
+                  //   isActive: isEyeGlassesArActive,
+                  // ),
                 ],
                 _buildMoreItem(
                   icon: Icons.person,
                   label: 'Profile',
                   onTap: () {
-                    context.go('/main/profile'); // Navigate to root
+                    context.go('/main/profile');
                     setState(() => _isMoreOpen = false);
                   },
                   isActive: isProfileActive,
@@ -217,7 +239,7 @@ class BottomTabBarState extends State<BottomTabBar> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: SizedBox(
-        width: 80,
+        width: 70,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -303,10 +325,11 @@ class BottomTabBarState extends State<BottomTabBar> {
               BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
               BottomNavigationBarItem(icon: Icon(Icons.task), label: 'Task'),
               BottomNavigationBarItem(
-                icon: Icon(Icons.calendar_month),
+                icon: Icon(Icons.timelapse_sharp),
                 label: 'Timesheet',
               ),
-              BottomNavigationBarItem(icon: Icon(Icons.approval), label: 'Org'),
+              BottomNavigationBarItem(
+                  icon: Icon(Icons.calendar_month), label: 'Meetings'),
               BottomNavigationBarItem(
                 icon: Icon(Icons.more_horiz),
                 label: 'More',

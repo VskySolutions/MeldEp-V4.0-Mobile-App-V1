@@ -1,9 +1,9 @@
-// ✅ Updated projectDetailsByIdModel with null safety fixes
 class projectDetailsByIdModel {
   final String name;
   final String projectName;
   final String projectModuleName;
   final String taskName;
+  final String description;
   final double estimateHours;
   final bool active;
   final bool deleted;
@@ -22,6 +22,7 @@ class projectDetailsByIdModel {
     required this.projectName,
     required this.projectModuleName,
     required this.taskName,
+    required this.description,
     required this.estimateHours,
     required this.active,
     required this.deleted,
@@ -42,6 +43,7 @@ class projectDetailsByIdModel {
       projectName: json['projectName'] ?? '',
       projectModuleName: json['projectModuleName'] ?? '',
       taskName: json['taskName'] ?? '',
+      description: json['description'] ?? '',
       estimateHours: (json['estimateHours'] ?? 0).toDouble(),
       active: json['active'] ?? false,
       deleted: json['deleted'] ?? false,

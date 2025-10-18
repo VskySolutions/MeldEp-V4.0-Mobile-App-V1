@@ -1,5 +1,4 @@
 import 'package:shared_preferences/shared_preferences.dart';
-
 import '../constants/storage_keys.dart';
 
 class LocalStorage {
@@ -68,15 +67,26 @@ class LocalStorage {
 
   // Last Break Minutes (int)
   static Future<bool> setLastBreakMinutes(String minutes) => _prefs().then(
-    (p) => p.setString(StorageKeys.LAST_BREAK_MINUTES_KEY, minutes),
-  );
+        (p) => p.setString(StorageKeys.LAST_BREAK_MINUTES_KEY, minutes),
+      );
 
+  // ICS helpers
   static Future<String?> getLastBreakMinutes() =>
       _prefs().then((p) => p.getString(StorageKeys.LAST_BREAK_MINUTES_KEY));
 
   static Future<bool> clearLastBreakMinutes() =>
       _prefs().then((p) => p.remove(StorageKeys.LAST_BREAK_MINUTES_KEY));
 
+  static Future<bool> setIcsKey(String url) =>
+      _prefs().then((p) => p.setString(StorageKeys.ICS_KEY, url));
+
+  static Future<String?> getIcsKey() =>
+      _prefs().then((p) => p.getString(StorageKeys.ICS_KEY));
+
+  static Future<bool> clearIcsKey() =>
+      _prefs().then((p) => p.remove(StorageKeys.ICS_KEY));
+
+      
   // ---------------- TIMER STORAGE ----------------
 
   // Activity ID
@@ -150,6 +160,19 @@ class LocalStorage {
     await prefs.remove(StorageKeys.ACTIVITY_NAME_TIMER);
     await prefs.remove(StorageKeys.ACTIVITY_TIMER_TIMESTAMP);
   }
+
+    // Update Banner Ignore Count
+  static Future<int> getUpdateIgnoreCount() =>
+      _prefs().then((p) => p.getInt(StorageKeys.UPDATE_IGNORE_COUNT) ?? 0);
+
+  static Future<bool> incrementUpdateIgnoreCount() async {
+    final prefs = await _prefs();
+    final currentCount = prefs.getInt(StorageKeys.UPDATE_IGNORE_COUNT) ?? 0;
+    return prefs.setInt(StorageKeys.UPDATE_IGNORE_COUNT, currentCount + 1);
+  }
+
+  static Future<bool> clearUpdateIgnoreCount() =>
+      _prefs().then((p) => p.remove(StorageKeys.UPDATE_IGNORE_COUNT));
 }
 
 

@@ -133,4 +133,96 @@ class Validators {
       return "Enter valid date ($format)";
     }
   }
+
+  /// Validate date string using your formats (MM/dd/yyyy by default)
+  static String? validateDateFormat(
+    String? value, {
+    String format = ConstFormats.DATE_MMDDYYYY,
+    DateTime? lastDate,
+  }) {
+    if (value == null || value.trim().isEmpty) {
+      return null;
+    }
+
+    try {
+      final parts = value.split('/');
+      if (parts.length != 3) return "Enter valid date ($format)";
+
+      final month = int.tryParse(parts[0]);
+      final day = int.tryParse(parts[1]);
+      final year = int.tryParse(parts[2]);
+
+      if (month == null || day == null || year == null) {
+        return "Enter valid date ($format)";
+      }
+
+      if (month < 1 || month > 12) {
+        return "Month must be between 1 and 12";
+      }
+
+      if (year < 2000 || year > 2050) {
+        return "Year must be between 2000 and 2050";
+      }
+
+      // Days in month check, including leap years
+      final maxDay = DateTime(year, month + 1, 0).day;
+      if (day < 1 || day > maxDay) {
+        return "Day must be between 1 and $maxDay for month $month";
+      }
+
+      final parsedDate = DateTime(year, month, day);
+      // Optional: Check for trailing characters by comparing reconstructed date
+      if (parsedDate.month != month ||
+          parsedDate.day != day ||
+          parsedDate.year != year) {
+        return "Enter valid date ($format)";
+      }
+
+      // Validate against lastDate if provided
+      if (lastDate != null && parsedDate.isAfter(lastDate)) {
+        // Format lastDate to match the expected input format (MM/dd/yyyy)
+        final formattedLastDate =
+            "${lastDate.month}/${lastDate.day}/${lastDate.year}";
+        return "Date must be on or before $formattedLastDate";
+      }
+
+      return null; // Valid date
+    } catch (_) {
+      return "Enter valid date ($format)";
+    }
+  }
+
+  /// Validate ICS URL
+  static String? validateMicrosoftIcsUrl(String? value) {
+    // Empty check
+    final raw = value?.trim() ?? '';
+    if (raw.isEmpty) return 'ICS URL is required';
+
+    // Accept https or webcal
+    final normalized =
+        raw.replaceFirst(RegExp(r'^webcal:', caseSensitive: false), 'https:');
+
+    // Parse URL
+    final uri = Uri.tryParse(normalized);
+    if (uri == null || !uri.hasAuthority || !uri.hasScheme) {
+      return 'Enter a valid Microsoft ICS URL';
+    }
+
+    // Scheme check
+    final schemeOk = uri.scheme.toLowerCase() == 'https' ||
+        uri.scheme.toLowerCase() == 'webcal';
+    if (!schemeOk) return 'Enter a valid Microsoft ICS URL';
+
+    // Host must be a Microsoft Outlook host
+    final host = uri.host.toLowerCase();
+    final hostOk = host == 'outlook.live.com' || host == 'outlook.office.com';
+    if (!hostOk) return 'Enter a valid Microsoft ICS URL';
+
+    // Must end with .ics
+    final path = uri.path.toLowerCase();
+    if (!path.endsWith('.ics')) return 'Enter a valid Microsoft ICS URL';
+
+    // All good
+    return null;
+  }
 }

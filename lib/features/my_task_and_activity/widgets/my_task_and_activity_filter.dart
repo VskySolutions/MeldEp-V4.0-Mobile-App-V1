@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:test_project/core/services/local_storage.dart';
 import 'package:test_project/core/theme/app_colors.dart';
 import 'package:test_project/core/widgets/buttons/custom_outlined_button.dart';
+import 'package:test_project/core/widgets/date_picker/date_input_field.dart';
 import 'package:test_project/core/widgets/input_field/custom_type_ahead_field.dart';
 import 'package:test_project/features/my_task_and_activity/my_task_and_activity_service.dart';
 
@@ -15,6 +16,7 @@ class TaskFilterPopup extends StatefulWidget {
   final String? initialTaskStatusId;
   final String? initialActiveStatus;
   final DateTime? initialTargetMonth;
+  final DateTime? initialSprintWeekEndDateDate;
 
   // Callback shape retained (caller-managed)
   final Function(
@@ -25,6 +27,7 @@ class TaskFilterPopup extends StatefulWidget {
     String?, // activityStatusId
     String?, // taskStatusId
     String?, // activeStatus
+    DateTime?, // targetMonth
     DateTime?, // targetMonth
   ) onApplyFilter;
 
@@ -42,6 +45,7 @@ class TaskFilterPopup extends StatefulWidget {
     required this.initialTargetMonth,
     required this.onApplyFilter,
     required this.onFetchTasks,
+    required this.initialSprintWeekEndDateDate,
   }) : super(key: key);
 
   @override
@@ -57,6 +61,7 @@ class _TaskFilterPopupState extends State<TaskFilterPopup> {
   late String? _tempActivityStatusId;
   late String? _tempTaskStatusId;
   late String? _tempActiveStatus;
+  late DateTime? _tempSprintWeekEndDateDate;
   late DateTime? _tempTargetMonth;
 
   // Utility
@@ -98,8 +103,9 @@ class _TaskFilterPopupState extends State<TaskFilterPopup> {
     _tempActivityNameId = widget.initialActivityNameId;
     _tempActivityStatusId = widget.initialActivityStatusId;
     _tempTaskStatusId = widget.initialTaskStatusId;
-    _tempActiveStatus = widget.initialActiveStatus ?? 'Active';
+    _tempActiveStatus = widget.initialActiveStatus;
     _tempTargetMonth = widget.initialTargetMonth;
+    _tempSprintWeekEndDateDate = widget.initialSprintWeekEndDateDate;
   }
 
   void _loadInitialData() async {
@@ -207,7 +213,11 @@ class _TaskFilterPopupState extends State<TaskFilterPopup> {
 
       setState(() {
         activityNamesDropdown = fetchedActivityNames
-            .map((module) => {"id": module.id, "name": module.name})
+            .map((module) => {
+                  "id": module.id,
+                  "name": module.name,
+                  "description": module.description
+                })
             .toList();
       });
     } catch (e) {
@@ -360,6 +370,32 @@ class _TaskFilterPopupState extends State<TaskFilterPopup> {
                   setState(() => _tempActiveStatus = value);
                 },
               ),
+              SizedBox(height: 14),
+
+              //Sprint Week End Date
+              DateInputField(
+                labelText: 'Sprint Week End Date',
+                datePickerFormat: "week",
+                initialDate: _tempSprintWeekEndDateDate,
+                onDateSelected: (date) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      setState(() {
+                        _tempSprintWeekEndDateDate = date;
+                      });
+                    }
+                  });
+                },
+                onDateError: (value) {
+                  // WidgetsBinding.instance.addPostFrameCallback((_) {
+                  // if (mounted) {
+                  //   setState(() {
+                  //     _activityDateError = value;
+                  //   });
+                  // }
+                  // });
+                },
+              ),
             ],
           ),
         ),
@@ -384,6 +420,7 @@ class _TaskFilterPopupState extends State<TaskFilterPopup> {
                   null,
                   null,
                   null,
+                  null,
                 );
                 setState(() {
                   _tempProjectId = null;
@@ -394,6 +431,7 @@ class _TaskFilterPopupState extends State<TaskFilterPopup> {
                   _tempTaskStatusId = null;
                   _tempActiveStatus = null;
                   _tempTargetMonth = null;
+                  _tempSprintWeekEndDateDate = null;
                 });
                 widget.onFetchTasks();
               },
@@ -412,6 +450,7 @@ class _TaskFilterPopupState extends State<TaskFilterPopup> {
                   _tempTaskStatusId,
                   _tempActiveStatus,
                   _tempTargetMonth,
+                  _tempSprintWeekEndDateDate,
                 );
                 Navigator.pop(context);
                 widget.onFetchTasks();
@@ -455,13 +494,16 @@ class EmployeeNamesModel {
 class ActivityNamesModel {
   final String id;
   final String name;
+  final String description;
 
-  ActivityNamesModel({required this.id, required this.name});
+  ActivityNamesModel(
+      {required this.id, required this.name, required this.description});
 
   factory ActivityNamesModel.fromJson(Map<String, dynamic> json) {
     return ActivityNamesModel(
       id: json['dropdownValue'] ?? '',
       name: json['dropdownValue'] ?? '',
+      description: json['description'] ?? '',
     );
   }
 }

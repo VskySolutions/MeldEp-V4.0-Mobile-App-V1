@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "352903349747",
+    "project_id": "meldep-uat",
+    "storage_bucket": "meldep-uat.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:352903349747:android:fc5342d5423d4054ecbe86",
+        "android_client_info": {
+          "package_name": "com.example.test_project.uat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCTcYWkJUzZwJwuB2uf7MPcKwM15HnQxWw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

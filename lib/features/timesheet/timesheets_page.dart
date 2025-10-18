@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -65,6 +67,12 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
   DateTime? tempFromMonth;
   DateTime? tempToMonth;
 
+  // Static Search
+  final TextEditingController _staticSearchFilterController =
+      TextEditingController();
+  bool _isShowStaticSearchField = false;
+  Timer? _searchDebounceTimer;
+
   /// -----------------------------------------------------------------------------
   /// Lifecycle
   /// -----------------------------------------------------------------------------
@@ -73,6 +81,13 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     super.initState();
     _fetchTimesheets();
     _loadEmployeeName();
+  }
+
+  @override
+  void dispose() {
+    _searchDebounceTimer?.cancel();
+    _staticSearchFilterController.dispose();
+    super.dispose();
   }
 
   /// -----------------------------------------------------------------------------
@@ -84,13 +99,21 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     _employeeName = await LocalStorage.getEmployeeName();
   }
 
-  /// Fetches a page of timesheets using current filters; appends on loadMore.
-  Future<void> _fetchTimesheets({bool loadMore = false}) async {
-    if (loadMore && !_hasMore) return;
-
-    if (!loadMore) {
+  /// Fetches a page of timesheets using current filters; appends on isLoadMore.
+  Future<void> _fetchTimesheets({
+    bool isLoadMore = false,
+    bool isSearchLoad = false,
+    String searchText = "",
+  }) async {
+    if (!isLoadMore) {
       setState(() {
         _isInitialLoading = true;
+        _currentPage = 1;
+      });
+    }
+
+    if (isSearchLoad) {
+      setState(() {
         _currentPage = 1;
       });
     }
@@ -102,7 +125,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
       "pageSize": 15,
       "sortBy": "",
       "descending": true,
-      "tempText": "",
+      "searchText": searchText,
       "createdBy": tempCreatedBy,
       "employeeId": tempEmployeeId ?? "",
       "projectId": tempProjectId,
@@ -124,10 +147,10 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
             dataList.map((json) => TimesheetModel.fromJson(json)).toList();
 
         setState(() {
-          if (loadMore) {
-            _timesheetsList.addAll(fetchedTimesheets);
-          } else {
+          if (_currentPage == 1) {
             _timesheetsList = fetchedTimesheets;
+          } else {
+            _timesheetsList.addAll(fetchedTimesheets);
           }
           _hasMore = fetchedTimesheets.length == 15;
           _isLoading = false;
@@ -232,6 +255,13 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     );
   }
 
+  void _onStaticSearchFilterChange(String value) {
+    if (_searchDebounceTimer?.isActive ?? false) _searchDebounceTimer?.cancel();
+    _searchDebounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _fetchTimesheets(searchText: value, isSearchLoad: true, isLoadMore: true);
+    });
+  }
+
   /// -----------------------------------------------------------------------------
   /// UI Helpers
   /// -----------------------------------------------------------------------------
@@ -242,23 +272,23 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
           () => setState(() => tempCreatedBy = null)),
       _FilterChipData('Employee Name', tempEmployeeId,
           () => setState(() => tempEmployeeId = null)),
-      _FilterChipData('Project', tempProjectId,
-          () => setState(() => tempProjectId = null)),
+      _FilterChipData(
+          'Project', tempProjectId, () => setState(() => tempProjectId = null)),
       _FilterChipData(
         'Project Modules',
         tempModuleId,
         () => setState(() => tempModuleId = null),
       ),
-      _FilterChipData('Project Tasks', tempTaskId,
-          () => setState(() => tempTaskId = null)),
+      _FilterChipData(
+          'Project Tasks', tempTaskId, () => setState(() => tempTaskId = null)),
       _FilterChipData('Activity Date', tempActivityDate,
           () => setState(() => tempActivityDate = null)),
       _FilterChipData('Week Filter', tempWeekFilter,
           () => setState(() => tempWeekFilter = null)),
       _FilterChipData('From Month', tempFromMonth,
           () => setState(() => tempFromMonth = null)),
-      _FilterChipData('To Month', tempToMonth,
-          () => setState(() => tempToMonth = null)),
+      _FilterChipData(
+          'To Month', tempToMonth, () => setState(() => tempToMonth = null)),
     ];
 
     return filters
@@ -343,17 +373,110 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                           child: Row(children: _buildFilterChips()),
                         ),
                       ),
-                      ElevatedButton.icon(
-                        onPressed: _onFilterPressed,
-                        label: Text(
-                          'Filter',
-                          style: TextStyle(color: AppColors.PRIMARY),
+                      // ElevatedButton.icon(
+                      //   onPressed: _onFilterPressed,
+                      //   label: Text(
+                      //     'Filter',
+                      //     style: TextStyle(color: AppColors.PRIMARY),
+                      //   ),
+                      //   icon: Icon(Icons.filter_list, color: AppColors.PRIMARY),
+                      // ),
+                      Material(
+                        elevation: 2,
+                        borderRadius: BorderRadius.circular(24),
+                        child: Container(
+                          height: 40,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              InkWell(
+                                onTap: () {
+                                  _isShowStaticSearchField
+                                      ? _onStaticSearchFilterChange("")
+                                      : null;
+                                  setState(() {
+                                    _staticSearchFilterController.clear();
+                                    _isShowStaticSearchField =
+                                        !_isShowStaticSearchField;
+                                  });
+                                },
+                                borderRadius: BorderRadius.horizontal(
+                                  left: Radius.circular(24),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                  ),
+                                  child: Icon(
+                                    _isShowStaticSearchField
+                                        ? Icons.search_off_outlined
+                                        : Icons.search,
+                                    color: AppColors.PRIMARY,
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                width: 1,
+                                height: 24,
+                                color: Colors.grey.shade300,
+                              ),
+                              InkWell(
+                                onTap: _onFilterPressed,
+                                borderRadius: BorderRadius.horizontal(
+                                  right: Radius.circular(24),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                  ),
+                                  child: Icon(
+                                    Icons.filter_alt_outlined,
+                                    color: AppColors.PRIMARY,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        icon: Icon(Icons.filter_list, color: AppColors.PRIMARY),
                       ),
                     ],
                   ),
                 ),
+                if (_isShowStaticSearchField)
+                  Padding(
+                    padding:
+                        const EdgeInsets.only(left: 8, right: 8, bottom: 8),
+                    child: TextFormField(
+                      controller: _staticSearchFilterController,
+                      onChanged: (value) => _onStaticSearchFilterChange(value),
+                      decoration: InputDecoration(
+                        labelText: 'Search',
+                        hintText: 'Search',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                        suffixIcon: _isListLoading
+                            ? Transform.scale(
+                                scale: 0.4,
+                                child: CircularProgressIndicator(
+                                  color: AppColors.PRIMARY,
+                                  strokeWidth: 4,
+                                ),
+                              )
+                            : IconButton(
+                                icon: const Icon(Icons.cancel_outlined),
+                                onPressed: () {
+                                  setState(() {
+                                    _staticSearchFilterController.clear();
+                                  });
+                                  _onStaticSearchFilterChange("");
+                                },
+                              ),
+                      ),
+                    ),
+                  ),
                 Center(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -406,7 +529,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                                                   setState(
                                                       () => _currentPage++);
                                                   _fetchTimesheets(
-                                                    loadMore: true,
+                                                    isLoadMore: true,
                                                   );
                                                 },
                                           child: _isListLoading

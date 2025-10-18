@@ -33,6 +33,7 @@ class InfoRow extends StatelessWidget {
             flex: labelFlex,
             child: Text(
               '$label:',
+              softWrap: true,
               style: labelStyle ??
                   const TextStyle(
                     fontWeight: FontWeight.w500,
@@ -41,38 +42,51 @@ class InfoRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
+// REPLACE ONLY the inner Row under: Expanded(flex: valueFlex, child: Row(...))
           Expanded(
-              flex: valueFlex,
-              child: Row(
-                children: [
-                  Text(
-                    value.isNotEmpty ? value : '-',
-                    style: valueStyle ??
-                        const TextStyle(fontWeight: FontWeight.w400),
-                  ),
-                  if (value.isNotEmpty && valueDetails != null) ...[
-                    const SizedBox(width: 4),
-                    Tooltip(
-                      message: valueDetails ?? 'No details available',
-                      preferBelow: true,
-                      child: GestureDetector(
-                        onTap: () {
-                          Fluttertoast.showToast(
-                            msg: "Press and hold to view activity description",
-                            toastLength: Toast.LENGTH_SHORT,
-                            gravity: ToastGravity.BOTTOM,
-                          );
-                        },
-                        child: Icon(
-                          Icons.info_outline,
-                          size: 18,
-                          color: Colors.grey[800],
-                        ),
-                      ),
+            flex: valueFlex,
+            child: value.isEmpty
+                ? const Text('-')
+                : RichText(
+                    textWidthBasis: TextWidthBasis.parent,
+                    text: TextSpan(
+                      style: DefaultTextStyle.of(context).style.merge(
+                            valueStyle ??
+                                const TextStyle(fontWeight: FontWeight.w400),
+                          ),
+                      children: [
+                        TextSpan(text: value),
+                        if (valueDetails != null)
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment
+                                .middle, // keeps icon inline
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: Tooltip(
+                                message: valueDetails ?? 'No details available',
+                                preferBelow: true,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Fluttertoast.showToast(
+                                      msg:
+                                          "Press and hold to view activity description",
+                                      toastLength: Toast.LENGTH_SHORT,
+                                      gravity: ToastGravity.BOTTOM,
+                                    );
+                                  },
+                                  child: Icon(
+                                    Icons.info_outline,
+                                    size: 18,
+                                    color: Colors.grey[800],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                  ],
-                ],
-              )),
+                  ),
+          ),
         ],
       ),
     );

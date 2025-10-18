@@ -98,7 +98,7 @@ class _TimesheetFilterPopupState extends State<TimesheetFilterPopup> {
 
   // Map incoming initial values to local selected state
   void _initializeValues() {
-    _selectedCreatedBy = widget.initialCreatedBy ?? 'Created By Me';
+    _selectedCreatedBy = widget.initialCreatedBy;
     _selectedEmployeeId = widget.initialEmployeeId;
     _selectedProjectId = widget.initialProjectId;
     _selectedModuleId = widget.initialModuleId;
@@ -117,6 +117,8 @@ class _TimesheetFilterPopupState extends State<TimesheetFilterPopup> {
     try {
       setState(() => _isLoading = true);
       await Future.wait([_fetchEmployeeNameIds(), _fetchProjectNameIds()]);
+      if(widget.initialModuleId != null) await _fetchProjectModuleNameIds();
+      if(widget.initialTaskId != null) await _fetchProjectTasksNameIds();
       setState(() => _isLoading = false);
     } catch (e) {
       setState(() => _isLoading = false);
@@ -280,6 +282,15 @@ class _TimesheetFilterPopupState extends State<TimesheetFilterPopup> {
                 });
                 _fetchProjectModuleNameIds();
               },
+              onCleared: () {
+                setState(() {
+                  _selectedProjectId = null;
+                  _selectedModuleId = null;
+                  _selectedTaskId = null;
+                  projectModulesDropdown = [];
+                  projectTasksDropdown = [];
+                });
+              },
             ),
             SizedBox(height: 14),
 
@@ -295,6 +306,13 @@ class _TimesheetFilterPopupState extends State<TimesheetFilterPopup> {
                   _selectedModuleId = value;
                 });
                 _fetchProjectTasksNameIds();
+              },
+              onCleared: () {
+                setState(() {
+                  _selectedModuleId = null;
+                  _selectedTaskId = null;
+                  projectTasksDropdown = [];
+                });
               },
             ),
             SizedBox(height: 14),

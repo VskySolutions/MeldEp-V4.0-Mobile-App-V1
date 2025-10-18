@@ -18,10 +18,12 @@ class MyTaskAndActivityNoteScreen extends StatefulWidget {
   final String id;
 
   @override
-  State<MyTaskAndActivityNoteScreen> createState() => _MyTaskAndActivityNoteScreenState();
+  State<MyTaskAndActivityNoteScreen> createState() =>
+      _MyTaskAndActivityNoteScreenState();
 }
 
-class _MyTaskAndActivityNoteScreenState extends State<MyTaskAndActivityNoteScreen> {
+class _MyTaskAndActivityNoteScreenState
+    extends State<MyTaskAndActivityNoteScreen> {
   /// --------------------------------------------------------------------------------------------------------------------------------------------------
   /// Variable Declarations
   /// --------------------------------------------------------------------------------------------------------------------------------------------------
@@ -61,10 +63,12 @@ class _MyTaskAndActivityNoteScreenState extends State<MyTaskAndActivityNoteScree
   Future<void> _fetchTaskNoteDetails() async {
     setState(() => _isLoading = true);
     try {
-      final response = await MyTaskAndActivityService.instance.getTaskNoteDetails(widget.id);
+      final response =
+          await MyTaskAndActivityService.instance.getTaskNoteDetails(widget.id);
       if (response.statusCode == 200) {
         setState(() {
-          _noteDetails = TaskNoteDetailsModel.listFromJson(response.data as List<dynamic>);
+          _noteDetails =
+              TaskNoteDetailsModel.listFromJson(response.data as List<dynamic>);
           _isLoading = false;
         });
       } else {
@@ -106,7 +110,8 @@ class _MyTaskAndActivityNoteScreenState extends State<MyTaskAndActivityNoteScree
     };
 
     try {
-      final response = await MyTaskAndActivityService.instance.postUpdateTaskNote(payload);
+      final response =
+          await MyTaskAndActivityService.instance.postUpdateTaskNote(payload);
       if (response.statusCode == 204) {
         if (!mounted) return;
         setState(() {
@@ -114,34 +119,40 @@ class _MyTaskAndActivityNoteScreenState extends State<MyTaskAndActivityNoteScree
           _noteId = null;
           _noteFieldController.clear();
         });
-        showCustomSnackBar(context, message: 'Note added successfully', durationSeconds: 2);
+        showCustomSnackBar(context,
+            message: 'Note added successfully', durationSeconds: 2);
         await _fetchTaskNoteDetails();
       } else {
         if (!mounted) return;
         setState(() => _isSubmitting = false);
-        showCustomSnackBar(context, message: 'Failed to add note', backgroundColor: AppColors.ERROR);
+        showCustomSnackBar(context,
+            message: 'Failed to add note', backgroundColor: AppColors.ERROR);
       }
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
       debugPrint('Add note error: $e');
-      showCustomSnackBar(context, message: 'Error adding note', backgroundColor: AppColors.ERROR);
+      showCustomSnackBar(context,
+          message: 'Error adding note', backgroundColor: AppColors.ERROR);
     }
   }
 
   /// Deletes a note after backend confirmation and refreshes the list.
   Future<void> _deleteTaskNote(String id, BuildContext context) async {
     try {
-      final response = await MyTaskAndActivityService.instance.deleteTaskNote(id);
+      final response =
+          await MyTaskAndActivityService.instance.deleteTaskNote(id);
       if (response.statusCode == 204) {
         showCustomSnackBar(context, message: 'Note deleted successfully');
         await _fetchTaskNoteDetails();
       } else {
-        showCustomSnackBar(context, message: 'Failed to delete note', backgroundColor: AppColors.ERROR);
+        showCustomSnackBar(context,
+            message: 'Failed to delete note', backgroundColor: AppColors.ERROR);
       }
     } catch (e) {
       debugPrint('Delete note error: $e');
-      showCustomSnackBar(context, message: 'Error deleting note', backgroundColor: AppColors.ERROR);
+      showCustomSnackBar(context,
+          message: 'Error deleting note', backgroundColor: AppColors.ERROR);
     }
   }
 
@@ -260,7 +271,8 @@ class _MyTaskAndActivityNoteScreenState extends State<MyTaskAndActivityNoteScree
                           height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
                       : const Icon(Icons.save, color: Colors.white),
@@ -308,7 +320,9 @@ class _MyTaskAndActivityNoteScreenState extends State<MyTaskAndActivityNoteScree
       }
       final firstItemText = _cleanText(liElements.first.text);
       final additionalItems = liElements.length - 1;
-      return additionalItems > 0 ? '$firstItemText (+$additionalItems more)' : firstItemText;
+      return additionalItems > 0
+          ? '$firstItemText (+$additionalItems more)'
+          : firstItemText;
     } catch (_) {
       return _truncateText(htmlString, maxLength: 100);
     }
@@ -336,7 +350,7 @@ class _MyTaskAndActivityNoteScreenState extends State<MyTaskAndActivityNoteScree
         isDense: true,
         contentPadding: EdgeInsets.all(8),
       ),
-      child: HtmlEmailEditor(
+      child: HtmlEditorInputField(
         editorHeight: 140,
         initialHtml: _noteFieldController.text,
         onChanged: (html) => _noteFieldController.text = html,
@@ -372,17 +386,27 @@ class _MyTaskAndActivityNoteScreenState extends State<MyTaskAndActivityNoteScree
           // Header
           Row(
             children: const [
-              Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.bold))),
+              Expanded(
+                  flex: 2,
+                  child: Text('Date',
+                      style: TextStyle(fontWeight: FontWeight.bold))),
               SizedBox(width: 1),
-              Expanded(flex: 2, child: Text('Cr. by', style: TextStyle(fontWeight: FontWeight.bold))),
+              Expanded(
+                  flex: 2,
+                  child: Text('Cr. by',
+                      style: TextStyle(fontWeight: FontWeight.bold))),
               SizedBox(width: 1),
-              Expanded(flex: 5, child: Text('Note', style: TextStyle(fontWeight: FontWeight.bold))),
+              Expanded(
+                  flex: 5,
+                  child: Text('Note',
+                      style: TextStyle(fontWeight: FontWeight.bold))),
               SizedBox(width: 1),
               Expanded(
                 flex: 2,
                 child: Align(
                   alignment: Alignment.centerRight,
-                  child: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text('Actions',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -391,7 +415,8 @@ class _MyTaskAndActivityNoteScreenState extends State<MyTaskAndActivityNoteScree
           // Rows
           ..._noteDetails.map((note) {
             final date = note.createdDate.length >= 8
-                ? note.createdDate.substring(0, 6) + note.createdDate.substring(8)
+                ? note.createdDate.substring(0, 6) +
+                    note.createdDate.substring(8)
                 : note.createdDate;
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
@@ -416,7 +441,8 @@ class _MyTaskAndActivityNoteScreenState extends State<MyTaskAndActivityNoteScree
                           children: [
                             Text(note.createdBy.toInitials()),
                             const SizedBox(width: 4),
-                            Icon(Icons.info_outline, size: 18, color: Colors.grey),
+                            Icon(Icons.info_outline,
+                                size: 18, color: Colors.grey),
                           ],
                         ),
                       ),
@@ -440,7 +466,8 @@ class _MyTaskAndActivityNoteScreenState extends State<MyTaskAndActivityNoteScree
                           child: CircleAvatar(
                             radius: 10,
                             backgroundColor: Colors.grey,
-                            child: const Icon(Icons.info_outline, size: 12, color: Colors.white),
+                            child: const Icon(Icons.info_outline,
+                                size: 12, color: Colors.white),
                           ),
                         ),
                       ],
@@ -461,7 +488,8 @@ class _MyTaskAndActivityNoteScreenState extends State<MyTaskAndActivityNoteScree
                               height: 25,
                               width: 25,
                               child: Center(
-                                child: Icon(Icons.edit, size: 18, color: Colors.black),
+                                child: Icon(Icons.edit,
+                                    size: 18, color: Colors.black),
                               ),
                             ),
                           ),
@@ -473,7 +501,8 @@ class _MyTaskAndActivityNoteScreenState extends State<MyTaskAndActivityNoteScree
                               height: 25,
                               width: 25,
                               child: Center(
-                                child: Icon(Icons.delete_outline, size: 18, color: AppColors.ERROR),
+                                child: Icon(Icons.delete_outline,
+                                    size: 18, color: AppColors.ERROR),
                               ),
                             ),
                           ),
@@ -512,7 +541,9 @@ class _MyTaskAndActivityNoteScreenState extends State<MyTaskAndActivityNoteScree
                   data: htmlContent,
                   style: {
                     'ul': Style(margin: Margins.zero),
-                    'li': Style(margin: Margins.only(bottom: 8), listStylePosition: ListStylePosition.outside),
+                    'li': Style(
+                        margin: Margins.only(bottom: 8),
+                        listStylePosition: ListStylePosition.outside),
                     'p': Style(margin: Margins.zero),
                   },
                 ),
@@ -549,10 +580,13 @@ class TaskNoteDetailsModel {
       createdBy: (json['user']?['person']?['fullName'] as String?) ?? '',
       note: json['note'] ?? '',
     );
-    }
+  }
 
   /// Parses a list of models from a JSON list.
   static List<TaskNoteDetailsModel> listFromJson(List<dynamic> jsonList) {
-    return jsonList.map((json) => TaskNoteDetailsModel.fromJson(json as Map<String, dynamic>)).toList();
+    return jsonList
+        .map((json) =>
+            TaskNoteDetailsModel.fromJson(json as Map<String, dynamic>))
+        .toList();
   }
 }

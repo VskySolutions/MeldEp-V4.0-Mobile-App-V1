@@ -164,12 +164,12 @@ class _ProjectActivityDetailsScreenState extends State<ProjectActivityDetailsScr
           value: details?.updatedByUser.person.fullName ?? '-',
         ),
         InfoRow(
-          label: 'Start Date',
-          value: details?.task.startDate ?? '-',
+          label: 'Created Date',
+          value: details?.createdOnUtc ?? '-',
         ),
         InfoRow(
-          label: 'End Date',
-          value: details?.task.endDate ?? '-',
+          label: 'Updated Date',
+          value: details?.updatedOnUtc ?? '-',
         ),
       ],
     );

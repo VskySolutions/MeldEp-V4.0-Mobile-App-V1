@@ -5,17 +5,18 @@ void showCustomSnackBar(
   required String message,
   Color backgroundColor = Colors.green,
   int durationSeconds = 4,
+  Color contentColor = Colors.white,
 }) {
   final snackBar = SnackBar(
     content: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Expanded(child: Text(message)),
+        Expanded(child: Text(message, style: TextStyle(color: contentColor)), ),
         GestureDetector(
           onTap: () {
             ScaffoldMessenger.of(context).hideCurrentSnackBar();
           },
-          child: const Icon(Icons.close, color: Colors.white),
+          child: Icon(Icons.close, color: contentColor),
         ),
       ],
     ),

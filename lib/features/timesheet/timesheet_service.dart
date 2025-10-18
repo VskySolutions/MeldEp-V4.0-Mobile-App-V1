@@ -68,7 +68,7 @@ class TimesheetService {
     String date,
   ) async {
     return await Network.authDio.get(
-      '/project-activities/dailytimesheetdropdown/list/$projectId/$moduleId/$taskId/$date',
+      '/project-activities/dailytimesheetdropdown/list/$projectId/$moduleId/$taskId',
     );
   }
 

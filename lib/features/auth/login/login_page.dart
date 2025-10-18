@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:test_project/boot/auth.dart';
+import 'package:test_project/core/flavor/flavor.dart';
 import 'package:test_project/core/services/local_storage.dart';
 import 'package:test_project/core/theme/app_colors.dart';
 import 'package:test_project/core/widgets/snackbar/custom_snackbar.dart';
@@ -29,7 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
   // State flags
   bool _isLoading = false;
   bool _isPasswordObscured = true;
-  bool _isRememberMeChecked = false;
+  bool _isRememberMeChecked = true;
 
   // Validation errors
   String? _usernameError;
@@ -38,7 +39,6 @@ class _LoginScreenState extends State<LoginScreen> {
   // Controllers
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-
 
   /// --------------------------------------------------------------------------------------------------------------------------------------------------
   /// Lifecycle
@@ -153,30 +153,47 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Center(
           child: SingleChildScrollView(
             child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: size.width * 0.07, // 7% of screen width
-                vertical: size.height * 0.04, // 4% of screen height
-              ),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    _buildHeader(theme),
-                    SizedBox(height: size.height * 0.08), // header spacing
-                    _buildUsernameField(theme),
-                    SizedBox(height: spacing),
-                    _buildPasswordField(theme),
-                    SizedBox(height: spacing * 0.8),
-                    _buildRememberMeAndForgotPassword(context),
-                    SizedBox(height: size.height * 0.05),
-                    _buildLoginButton(size),
-                    SizedBox(height: size.height * 0.08),
-                  ],
+                padding: EdgeInsets.symmetric(
+                  horizontal: size.width * 0.03,
+                  // vertical: size.height * 0.04, // 4% of screen height
                 ),
-              ),
-            ),
+                child: Card(
+                  color: Colors.white,
+                  elevation: 3,
+                  child: Form(
+                    key: _formKey,
+                    child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: size.width * 0.04,
+                          vertical: size.height * 0.06,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            _buildHeader(theme),
+                            SizedBox(
+                                height: size.height * 0.08), // header spacing
+                            _buildUsernameField(theme),
+                            SizedBox(height: spacing),
+                            _buildPasswordField(theme),
+                            SizedBox(height: spacing * 0.8),
+                            _buildRememberMeAndForgotPassword(context),
+                            SizedBox(height: size.height * 0.05),
+                            _buildLoginButton(size),
+                            // SizedBox(height: size.height * 0.08),
+                            if (false)
+                              ElevatedButton(
+                                // icon: Icon(Icons.crop),
+                                child: Text('Eye Glasses AR'),
+                                onPressed: () {
+                                  context.go('/eyeGlassesAR');
+                                },
+                              ),
+                          ],
+                        )),
+                  ),
+                )),
           ),
         ),
       ),
@@ -191,6 +208,11 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildHeader(ThemeData theme) {
     return Column(
       children: [
+        Container(
+          height: 40,
+          child: Image.asset('assets/images/meld-epLogo.png'),
+        ),
+        const SizedBox(height: 24),
         Text(
           LoginStrings.welcomeTitle,
           style: theme.textTheme.headlineMedium?.copyWith(
@@ -293,7 +315,9 @@ class _LoginScreenState extends State<LoginScreen> {
           ],
         ),
         TextButton(
-          onPressed:() {context.push('/forgotPassword');},
+          onPressed: () {
+            context.push('/forgotPassword');
+          },
           child: const Text(
             LoginStrings.forgotPassword,
             style: TextStyle(
